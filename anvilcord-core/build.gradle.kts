@@ -3,6 +3,8 @@ plugins {
 }
 
 dependencies {
+    api("org.springframework.boot:spring-boot-autoconfigure")
+
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
 

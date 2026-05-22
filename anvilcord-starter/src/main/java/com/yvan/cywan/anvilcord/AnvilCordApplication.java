@@ -1,12 +1,10 @@
 package com.yvan.cywan.anvilcord;
 
 
+import com.yvan.cywan.anvilcord.core.AnvilCordPluginHost;
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
-@ConfigurationPropertiesScan
-@SpringBootApplication
+@AnvilCordPluginHost
 public class AnvilCordApplication {
 
     static void main(String[] args) {

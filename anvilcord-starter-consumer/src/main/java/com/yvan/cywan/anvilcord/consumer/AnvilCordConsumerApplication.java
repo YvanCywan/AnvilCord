@@ -1,21 +1,20 @@
 package com.yvan.cywan.anvilcord.consumer;
 
-import com.yvan.cywan.anvilcord.AnvilCordApplication;
+import com.yvan.cywan.anvilcord.core.AnvilCordPluginHost;
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * Example host application that consumes {@code anvilcord-starter} without
- * publishing an artifact of its own.
+ * Example host application that compiles against AnvilCord core contracts while
+ * loading the full framework from {@code anvilcord-starter} at runtime.
  *
  * <p>Future plugin modules can be placed under this package, or the scan base
  * can be expanded by a real host application to include external plugin
  * packages.</p>
  */
-@SpringBootApplication(scanBasePackageClasses = AnvilCordApplication.class)
+@AnvilCordPluginHost
 public class AnvilCordConsumerApplication {
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         SpringApplication.run(AnvilCordConsumerApplication.class, args);
     }
 }

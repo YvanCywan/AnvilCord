@@ -7,8 +7,12 @@ plugins {
 description = "Non-publishable consumer used to verify AnvilCord starter integration."
 
 dependencies {
-    implementation(project(":anvilcord-starter"))
+    implementation(project(":anvilcord-core"))
+    implementation("org.springframework.boot:spring-boot-starter")
 
+    runtimeOnly(project(":anvilcord-starter"))
+
+    testImplementation(project(":anvilcord-starter"))
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
