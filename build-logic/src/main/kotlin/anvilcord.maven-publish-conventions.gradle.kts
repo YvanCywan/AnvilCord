@@ -73,58 +73,59 @@ extensions.configure<PublishingExtension> {
             }
         }
 
-    publications.withType<MavenPublication>().configureEach {
-        versionMapping {
-            usage("java-api") {
-                fromResolutionOf("runtimeClasspath")
+        publications.withType<MavenPublication>().configureEach {
+            versionMapping {
+                usage("java-api") {
+                    fromResolutionOf("runtimeClasspath")
+                }
+                usage("java-runtime") {
+                    fromResolutionResult()
+                }
             }
-            usage("java-runtime") {
-                fromResolutionResult()
-            }
-        }
 
-        pom {
-            name.set(project.name)
-            description.set(project.description.takeUnless { it.isNullOrBlank() } ?: rootProject.description)
-            url.set("https://github.com/yvancywan/AnvilCord")
-            licenses {
-                license {
-                    name.set("MIT License")
-                    url.set("https://opensource.org/license/mit/")
-                    distribution.set("repo")
-                }
-            }
-            developers {
-                developer {
-                    id.set("yvancywan")
-                    name.set("Yvan Cywan")
-                }
-            }
-            scm {
-                connection.set("scm:git:git://github.com/yvancywan/AnvilCord.git")
-                developerConnection.set("scm:git:ssh://git@github.com/yvancywan/AnvilCord.git")
+            pom {
+                name.set(project.name)
+                description.set(project.description.takeUnless { it.isNullOrBlank() } ?: rootProject.description)
                 url.set("https://github.com/yvancywan/AnvilCord")
+                licenses {
+                    license {
+                        name.set("MIT License")
+                        url.set("https://opensource.org/license/mit/")
+                        distribution.set("repo")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("yvancywan")
+                        name.set("Yvan Cywan")
+                    }
+                }
+                scm {
+                    connection.set("scm:git:git://github.com/yvancywan/AnvilCord.git")
+                    developerConnection.set("scm:git:ssh://git@github.com/yvancywan/AnvilCord.git")
+                    url.set("https://github.com/yvancywan/AnvilCord")
+                }
             }
         }
     }
-}
 
-extensions.configure<SigningExtension> {
-    isRequired = gradle.startParameter.taskNames.any { taskName ->
-        val task = taskName.substringAfterLast(':').lowercase()
-        task.startsWith("publish") && !task.contains("mavenlocal")
+    extensions.configure<SigningExtension> {
+        isRequired = gradle.startParameter.taskNames.any { taskName ->
+            val task = taskName.substringAfterLast(':').lowercase()
+            task.startsWith("publish") && !task.contains("mavenlocal")
+        }
+
+        val signingKey = providers.gradleProperty("signingInMemoryKey")
+            .orElse(providers.environmentVariable("SIGNING_KEY"))
+            .orNull
+        val signingPassword = providers.gradleProperty("signingInMemoryKeyPassword")
+            .orElse(providers.environmentVariable("SIGNING_PASSWORD"))
+            .orNull
+
+        if (!signingKey.isNullOrBlank()) {
+            useInMemoryPgpKeys(signingKey, signingPassword)
+        }
+
+        sign(extensions.getByType<PublishingExtension>().publications)
     }
-
-    val signingKey = providers.gradleProperty("signingInMemoryKey")
-        .orElse(providers.environmentVariable("SIGNING_KEY"))
-        .orNull
-    val signingPassword = providers.gradleProperty("signingInMemoryKeyPassword")
-        .orElse(providers.environmentVariable("SIGNING_PASSWORD"))
-        .orNull
-
-    if (!signingKey.isNullOrBlank()) {
-        useInMemoryPgpKeys(signingKey, signingPassword)
-    }
-
-    sign(extensions.getByType<PublishingExtension>().publications)
 }
