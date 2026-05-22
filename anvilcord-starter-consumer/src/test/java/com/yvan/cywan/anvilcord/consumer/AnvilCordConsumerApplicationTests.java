@@ -2,6 +2,9 @@ package com.yvan.cywan.anvilcord.consumer;
 
 import module java.base;
 
+import com.yvan.cywan.anvilcord.core.event.BotEvent;
+import com.yvan.cywan.anvilcord.core.event.BotReadyEvent;
+import com.yvan.cywan.anvilcord.core.event.BotUserProfile;
 import com.yvan.cywan.anvilcord.core.event.FrameworkInitializationEvent;
 import com.yvan.cywan.anvilcord.core.event.VirtualEventBus;
 import com.yvan.cywan.anvilcord.discord.command.SlashCommand;
@@ -26,6 +29,11 @@ import static org.assertj.core.api.Assertions.assertThat;
         }
 )
 final class AnvilCordConsumerApplicationTests {
+
+    private static final String EXAMPLE_PLUGIN_INITIALIZED_EVENT =
+            "com.yvan.cywan.anvilcord.example.plugin.ExamplePluginInitializedEvent";
+    private static final String EXAMPLE_PLUGIN_OBSERVED_BOT_READY_EVENT =
+            "com.yvan.cywan.anvilcord.example.plugin.ExamplePluginObservedBotReadyEvent";
 
     @Autowired
     private VirtualEventBus eventBus;
@@ -53,6 +61,16 @@ final class AnvilCordConsumerApplicationTests {
                 .containsExactlyInAnyOrder("consumer-echo", "example-runtime", "ping");
         assertThat(initializedEvent.registeredEventTypeCount()).isPositive();
         assertThat(initializedEvent.occurredAt()).isNotNull();
+
+        assertThat(frameworkInitializationProbe.awaitPluginInitialized().getClass().getName())
+                .isEqualTo(EXAMPLE_PLUGIN_INITIALIZED_EVENT);
+
+        eventBus.publish(new BotReadyEvent(
+                new BotUserProfile("42", "runtime-test-bot", "", "runtime-test-bot", "", true),
+                Instant.now()
+        ));
+        assertThat(frameworkInitializationProbe.awaitPluginObservedBotReady().getClass().getName())
+                .isEqualTo(EXAMPLE_PLUGIN_OBSERVED_BOT_READY_EVENT);
     }
 
     @TestConfiguration
@@ -67,9 +85,14 @@ final class AnvilCordConsumerApplicationTests {
     static final class FrameworkInitializationProbe {
 
         private final CountDownLatch initialized = new CountDownLatch(1);
+        private final CountDownLatch pluginInitialized = new CountDownLatch(1);
+        private final CountDownLatch pluginObservedBotReady = new CountDownLatch(1);
         private final AtomicReference<FrameworkInitializationEvent> event = new AtomicReference<>();
+        private final AtomicReference<BotEvent> pluginInitializedEvent = new AtomicReference<>();
+        private final AtomicReference<BotEvent> pluginObservedBotReadyEvent = new AtomicReference<>();
 
         FrameworkInitializationProbe(VirtualEventBus eventBus) {
+            eventBus.registerListener(BotEvent.class, this::recordPluginEvent);
             eventBus.registerListener(FrameworkInitializationEvent.class, initializedEvent -> {
                 event.set(initializedEvent);
                 initialized.countDown();
@@ -79,6 +102,27 @@ final class AnvilCordConsumerApplicationTests {
         FrameworkInitializationEvent awaitInitialization() throws InterruptedException {
             assertThat(initialized.await(5, TimeUnit.SECONDS)).isTrue();
             return event.get();
+        }
+
+        BotEvent awaitPluginInitialized() throws InterruptedException {
+            assertThat(pluginInitialized.await(5, TimeUnit.SECONDS)).isTrue();
+            return pluginInitializedEvent.get();
+        }
+
+        BotEvent awaitPluginObservedBotReady() throws InterruptedException {
+            assertThat(pluginObservedBotReady.await(5, TimeUnit.SECONDS)).isTrue();
+            return pluginObservedBotReadyEvent.get();
+        }
+
+        private void recordPluginEvent(BotEvent event) {
+            String eventTypeName = event.getClass().getName();
+            if (EXAMPLE_PLUGIN_INITIALIZED_EVENT.equals(eventTypeName)) {
+                pluginInitializedEvent.set(event);
+                pluginInitialized.countDown();
+            } else if (EXAMPLE_PLUGIN_OBSERVED_BOT_READY_EVENT.equals(eventTypeName)) {
+                pluginObservedBotReadyEvent.set(event);
+                pluginObservedBotReady.countDown();
+            }
         }
     }
 }

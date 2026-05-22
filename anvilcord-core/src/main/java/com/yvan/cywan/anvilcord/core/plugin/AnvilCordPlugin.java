@@ -19,6 +19,22 @@ public interface AnvilCordPlugin {
     String id();
 
     /**
+     * Entrypoint invoked once while the AnvilCord starter is initializing the
+     * host application context.
+     *
+     * <p>Plugins can use this hook to bootstrap their own systems, publish
+     * custom events, and register listeners for framework events such as
+     * {@code BotReadyEvent}. The hook runs before the Discord gateway lifecycle
+     * starts, so listeners registered here can observe the first ready/connect
+     * event.</p>
+     *
+     * @param context runtime services exposed by the framework
+     * @throws Exception lets plugin authors use natural checked exceptions
+     */
+    default void initialize(AnvilCordPluginContext context) throws Exception {
+    }
+
+    /**
      * Returns package roots that AnvilCord should scan for plugin-owned Spring
      * components and annotation-free framework contracts such as slash commands.
      *

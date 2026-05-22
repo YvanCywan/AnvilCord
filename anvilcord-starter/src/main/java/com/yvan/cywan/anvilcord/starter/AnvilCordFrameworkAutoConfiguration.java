@@ -30,5 +30,10 @@ public class AnvilCordFrameworkAutoConfiguration {
 	static AnvilCordPluginBeanRegistrar anvilCordPluginBeanRegistrar() {
 		return new AnvilCordPluginBeanRegistrar();
 	}
+
+	@Bean
+	AnvilCordPluginInitializer anvilCordPluginInitializer(VirtualEventBus eventBus) {
+		return new AnvilCordPluginInitializer(eventBus);
+	}
 }
 

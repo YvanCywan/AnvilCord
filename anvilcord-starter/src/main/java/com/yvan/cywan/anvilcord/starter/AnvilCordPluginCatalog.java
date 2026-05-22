@@ -31,6 +31,10 @@ final class AnvilCordPluginCatalog {
         return SCAN_BASE_PACKAGES_BY_CLASS_LOADER.computeIfAbsent(classLoader, AnvilCordPluginCatalog::loadScanBasePackages);
     }
 
+    static List<AnvilCordPlugin> plugins(ResourceLoader resourceLoader) {
+        return loadPlugins(pluginClassLoader(resourceLoader));
+    }
+
     private static Set<String> loadScanBasePackages(ClassLoader classLoader) {
         Set<String> basePackages = new LinkedHashSet<>();
         for (AnvilCordPlugin plugin : loadPlugins(classLoader)) {
