@@ -1,4 +1,4 @@
-import org.gradle.api.credentials.PasswordCredentials
+import org.gradle.api.artifacts.repositories.PasswordCredentials
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
@@ -71,10 +71,18 @@ extensions.configure<PublishingExtension> {
                     .orElse(providers.environmentVariable("MAVEN_CENTRAL_PASSWORD"))
                     .orNull
             }
-        }
-    }
+        }U
 
     publications.withType<MavenPublication>().configureEach {
+        versionMapping {
+            usage("java-api") {
+                fromResolutionOf("runtimeClasspath")
+            }
+            usage("java-runtime") {
+                fromResolutionResult()
+            }
+        }
+
         pom {
             name.set(project.name)
             description.set(project.description.takeUnless { it.isNullOrBlank() } ?: rootProject.description)

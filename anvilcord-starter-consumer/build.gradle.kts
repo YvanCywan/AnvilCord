@@ -2,7 +2,7 @@ import org.gradle.api.tasks.bundling.Jar
 
 plugins {
     id("anvilcord.java-conventions")
-    id("com.yvan.cywan.anvilcord")
+    id("io.github.yvancywan.anvilcord")
 }
 
 description = "Non-publishable consumer used to verify AnvilCord starter integration."

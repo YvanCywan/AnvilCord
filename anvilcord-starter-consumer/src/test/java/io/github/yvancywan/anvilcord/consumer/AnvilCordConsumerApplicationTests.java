@@ -34,11 +34,11 @@ import static org.mockito.Mockito.mock;
 final class AnvilCordConsumerApplicationTests {
 
     private static final String EXAMPLE_PLUGIN_INITIALIZED_EVENT =
-            "com.yvan.cywan.anvilcord.example.plugin.ExamplePluginInitializedEvent";
+            "io.github.yvancywan.anvilcord.example.plugin.ExamplePluginInitializedEvent";
     private static final String EXAMPLE_PLUGIN_OBSERVED_BOT_READY_EVENT =
-            "com.yvan.cywan.anvilcord.example.plugin.ExamplePluginObservedBotReadyEvent";
+            "io.github.yvancywan.anvilcord.example.plugin.ExamplePluginObservedBotReadyEvent";
     private static final String EXAMPLE_PLUGIN_OBSERVED_DISCORD_EVENT =
-            "com.yvan.cywan.anvilcord.example.plugin.ExamplePluginObservedDiscordEvent";
+            "io.github.yvancywan.anvilcord.example.plugin.ExamplePluginObservedDiscordEvent";
 
     @Autowired
     private VirtualEventBus eventBus;

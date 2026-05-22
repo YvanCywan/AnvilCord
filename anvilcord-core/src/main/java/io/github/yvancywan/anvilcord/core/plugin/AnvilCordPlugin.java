@@ -6,7 +6,7 @@ import java.util.Set;
  * Runtime-discoverable plugin contract for AnvilCord extension jars.
  *
  * <p>Plugin jars expose implementations with Java's {@link java.util.ServiceLoader}
- * by adding a {@code META-INF/services/com.yvan.cywan.anvilcord.core.plugin.AnvilCordPlugin}
+ * by adding a {@code META-INF/services/io.github.yvancywan.anvilcord.core.plugin.AnvilCordPlugin}
  * resource. Host applications can then place the plugin jar on the runtime
  * classpath, for example with Gradle {@code runtimeOnly}, without compiling
  * against the plugin's classes.</p>

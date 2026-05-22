@@ -8,6 +8,6 @@ spring:
 logging:
   level:
     root: INFO
-    com.yvan.cywan.anvilcord: DEBUG
+    io.github.yvancywan.anvilcord: DEBUG
     discord4j: INFO
     reactor.netty: WARN

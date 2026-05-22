@@ -61,7 +61,7 @@ class AnvilCordPluginHostPlugin : Plugin<Project> {
 
     private companion object {
         const val ANVILCORD_GROUP = "io.github.yvancywan"
-        const val ANVILCORD_MAIN_CLASS = "com.yvan.cywan.anvilcord.AnvilCordApplication"
+        const val ANVILCORD_MAIN_CLASS = "io.github.yvancywan.anvilcord.AnvilCordApplication"
         const val DEFAULT_ANVILCORD_VERSION = "0.0.1-SNAPSHOT"
     }
 }

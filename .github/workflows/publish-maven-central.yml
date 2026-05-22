@@ -1,0 +1,58 @@
+name: Publish to Maven Central
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-maven-central-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Build and publish Maven artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_USER }}
+      MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_PASS }}
+      SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+      SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build and test
+        run: ./gradlew build
+
+      - name: Build AnvilCord Gradle plugin
+        working-directory: anvilcord-gradle-plugin
+        run: ../gradlew build
+
+      - name: Publish AnvilCord libraries to Maven Central
+        run: |
+          ./gradlew \
+            :anvilcord-core:publishAllPublicationsToMavenCentralRepository \
+            :anvilcord-discord:publishAllPublicationsToMavenCentralRepository \
+            :anvilcord-starter:publishAllPublicationsToMavenCentralRepository
+
+      - name: Publish AnvilCord Gradle plugin to Maven Central
+        working-directory: anvilcord-gradle-plugin
+        run: ../gradlew publishAllPublicationsToMavenCentralRepository
+
