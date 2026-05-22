@@ -7,10 +7,10 @@ plugins {
 description = "AnvilCord starter application"
 
 dependencies {
-    implementation(project(":anvilcord-core"))
-    implementation(project(":anvilcord-discord"))
+    api(project(":anvilcord-core"))
+    api(project(":anvilcord-discord"))
 
-    implementation("org.springframework.boot:spring-boot-starter")
+    api("org.springframework.boot:spring-boot-starter")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
 
     compileOnly("org.projectlombok:lombok")
