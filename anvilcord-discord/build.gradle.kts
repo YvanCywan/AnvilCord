@@ -1,3 +1,7 @@
+plugins {
+    id("anvilcord.java-conventions")
+}
+
 dependencies {
     api(project(":anvilcord-core"))
     api("com.discord4j:discord4j-core:3.2.6")
