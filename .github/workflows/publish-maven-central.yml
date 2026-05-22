@@ -47,10 +47,7 @@ jobs:
 
       - name: Publish AnvilCord libraries to Maven Central
         run: |
-          ./gradlew \
-            :anvilcord-core:publishAllPublicationsToMavenCentralRepository \
-            :anvilcord-discord:publishAllPublicationsToMavenCentralRepository \
-            :anvilcord-starter:publishAllPublicationsToMavenCentralRepository
+          ./gradlew publishAllPublicationsToMavenCentralRepository
 
       - name: Publish AnvilCord Gradle plugin to Maven Central
         working-directory: anvilcord-gradle-plugin
