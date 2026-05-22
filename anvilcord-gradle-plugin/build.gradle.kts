@@ -5,7 +5,6 @@ plugins {
 }
 
 group = "io.github.yvancywan"
-version = "0.0.1-SNAPSHOT"
 description = "Gradle plugin for AnvilCord plugin host projects"
 
 repositories {
@@ -24,6 +23,11 @@ gradlePlugin {
         }
     }
 }
+
+version = providers.gradleProperty("anvilCordVersion")
+    .orElse(providers.environmentVariable("ANVILCORD_VERSION"))
+    .orElse("0.0.1-SNAPSHOT")
+    .get()
 
 tasks.jar {
     manifest {

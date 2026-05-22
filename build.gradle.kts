@@ -4,6 +4,9 @@ plugins {
 }
 
 group = "io.github.yvancywan"
-version = "0.0.1"
+version = providers.gradleProperty("anvilCordVersion")
+    .orElse(providers.environmentVariable("ANVILCORD_VERSION"))
+    .orElse("0.0.1-SNAPSHOT")
+    .get()
 description = "AnvilCord"
 

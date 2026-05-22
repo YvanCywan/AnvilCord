@@ -61,6 +61,24 @@ Publish the framework artifacts to your local Maven repository for testing from 
 ./gradlew publishToMavenLocal
 ```
 
+Override the project version for a local build or publish:
+
+```sh
+./gradlew build -PanvilCordVersion=0.1.0-SNAPSHOT
+```
+
+## Release versioning
+
+GitHub Actions computes the AnvilCord version from Conventional Commits with `paulhatch/semantic-version` in `.github/workflows/build-and-publish.yml`.
+
+- `feat:` commits bump the minor version.
+- Other commit types bump the patch version.
+- Commits with `!` in the header, or `BREAKING CHANGE:` / `BREAKING-CHANGE:` in the body, bump the major version.
+
+Pushes to `main` publish the next calculated snapshot, for example `0.1.0-SNAPSHOT`. Version tags like `v0.1.0` publish the exact release version without the leading `v`.
+
+The workflow passes the generated version to Gradle through `ANVILCORD_VERSION`; locally, use `-PanvilCordVersion=...` or the `ANVILCORD_VERSION` environment variable.
+
 ## Running the sample host
 
 `anvilcord-starter-consumer` is the sample host application. It applies the AnvilCord Gradle plugin and places `anvilcord-example-plugin` on the runtime classpath.
