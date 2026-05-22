@@ -86,6 +86,7 @@ public final class AnvilCordSlashCommandBeanRegistrar implements BeanDefinitionR
                 // A non-Spring-Boot context can still use the built-in commands.
             }
         }
+        basePackages.addAll(AnvilCordPluginCatalog.scanBasePackages(resourceLoader));
         basePackages.add(PingCommand.class.getPackageName());
         return basePackages;
     }

@@ -25,5 +25,10 @@ public class AnvilCordFrameworkAutoConfiguration {
 	static AnvilCordSlashCommandBeanRegistrar anvilCordSlashCommandBeanRegistrar() {
 		return new AnvilCordSlashCommandBeanRegistrar();
 	}
+
+	@Bean
+	static AnvilCordPluginBeanRegistrar anvilCordPluginBeanRegistrar() {
+		return new AnvilCordPluginBeanRegistrar();
+	}
 }
 

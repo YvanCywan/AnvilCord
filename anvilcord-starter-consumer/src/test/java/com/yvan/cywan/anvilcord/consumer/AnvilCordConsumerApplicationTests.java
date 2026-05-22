@@ -44,11 +44,13 @@ final class AnvilCordConsumerApplicationTests {
         assertThat(botCoreProperties.hasToken()).isFalse();
         assertThat(slashCommands)
                 .extracting(command -> command.commandRequest().name())
-                .containsExactlyInAnyOrder("consumer-echo", "ping");
-        assertThat(slashCommandOrchestrator.commandNames()).containsExactlyInAnyOrder("consumer-echo", "ping");
+                .containsExactlyInAnyOrder("consumer-echo", "example-runtime", "ping");
+        assertThat(slashCommandOrchestrator.commandNames())
+                .containsExactlyInAnyOrder("consumer-echo", "example-runtime", "ping");
 
         FrameworkInitializationEvent initializedEvent = frameworkInitializationProbe.awaitInitialization();
-        assertThat(initializedEvent.slashCommandNames()).containsExactlyInAnyOrder("consumer-echo", "ping");
+        assertThat(initializedEvent.slashCommandNames())
+                .containsExactlyInAnyOrder("consumer-echo", "example-runtime", "ping");
         assertThat(initializedEvent.registeredEventTypeCount()).isPositive();
         assertThat(initializedEvent.occurredAt()).isNotNull();
     }

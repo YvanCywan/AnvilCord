@@ -8,6 +8,8 @@ plugins {
 description = "Non-publishable consumer used to verify AnvilCord starter integration."
 
 dependencies {
+    runtimeOnly(project(":anvilcord-example-plugin"))
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
