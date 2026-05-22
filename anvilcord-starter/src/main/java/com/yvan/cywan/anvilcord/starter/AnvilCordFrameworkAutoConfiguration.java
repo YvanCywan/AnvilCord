@@ -1,0 +1,23 @@
+package com.yvan.cywan.anvilcord.starter;
+
+import com.yvan.cywan.anvilcord.core.event.VirtualEventBus;
+import com.yvan.cywan.anvilcord.discord.DiscordGatewayBridge;
+import com.yvan.cywan.anvilcord.discord.config.BotCoreProperties;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.ComponentScan;
+
+/**
+ * Wires AnvilCord's framework-owned beans when {@code anvilcord-starter} is on
+ * a Spring Boot application's runtime classpath.
+ */
+@AutoConfiguration
+@EnableConfigurationProperties(BotCoreProperties.class)
+@ComponentScan(basePackageClasses = {
+		VirtualEventBus.class,
+		DiscordGatewayBridge.class,
+		FrameworkInitializationPublisher.class
+})
+public class AnvilCordFrameworkAutoConfiguration {
+}
+
