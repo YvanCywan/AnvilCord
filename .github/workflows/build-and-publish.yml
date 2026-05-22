@@ -83,14 +83,10 @@ jobs:
           echo "Base tag: ${{ steps.semantic-version.outputs.version_tag }}"
 
       - name: Build main project
-        env:
-          ANVILCORD_VERSION: ${{ steps.semver.outputs.version }}
-        run: ./gradlew build --stacktrace
+        run: ./gradlew build -Pverison=${{ steps.semver.outputs.version }} --stacktrace
 
       - name: Build included Gradle plugin
-        env:
-          ANVILCORD_VERSION: ${{ steps.semver.outputs.version }}
-        run: ./gradlew -p anvilcord-gradle-plugin build --stacktrace
+        run: ./gradlew -p anvilcord-gradle-plugin build -Pverison=${{ steps.semver.outputs.version }} --stacktrace
 
   publish:
     name: Publish
@@ -130,20 +126,18 @@ jobs:
 
       - name: Publish main project artifacts
         env:
-          ANVILCORD_VERSION: ${{ needs.build.outputs.version }}
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
-        run: ./gradlew publish --stacktrace --info
+        run: ./gradlew publish -Pverison=${{ needs.build.outputs.version }} --stacktrace --info
 
       - name: Publish Gradle plugin artifact
         env:
-          ANVILCORD_VERSION: ${{ needs.build.outputs.version }}
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
-        run: ./gradlew -p anvilcord-gradle-plugin publish --stacktrace --info
+        run: ./gradlew -p anvilcord-gradle-plugin publish -Pverison=${{ needs.build.outputs.version }} --stacktrace --info
 
 

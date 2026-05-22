@@ -64,7 +64,7 @@ Publish the framework artifacts to your local Maven repository for testing from 
 Override the project version for a local build or publish:
 
 ```sh
-./gradlew build -PanvilCordVersion=0.1.0-SNAPSHOT
+./gradlew build -Pverison=0.1.0-SNAPSHOT
 ```
 
 ## Release versioning
@@ -77,7 +77,7 @@ GitHub Actions computes the AnvilCord version from Conventional Commits with `pa
 
 Pushes to `main` publish the next calculated snapshot, for example `0.1.0-SNAPSHOT`. Version tags like `v0.1.0` publish the exact release version without the leading `v`.
 
-The workflow passes the generated version to Gradle through `ANVILCORD_VERSION`; locally, use `-PanvilCordVersion=...` or the `ANVILCORD_VERSION` environment variable.
+The workflow passes the generated version to every Gradle invocation with `-Pverison=...`. The build also accepts `-Pversion=...`, `-PanvilCordVersion=...`, and `ANVILCORD_VERSION` as compatibility aliases.
 
 ## Running the sample host
 

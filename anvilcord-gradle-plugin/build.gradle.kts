@@ -1,11 +1,19 @@
 plugins {
     `kotlin-dsl`
     `java-gradle-plugin`
-    id("anvilcord.maven-publish-conventions")
+    id("anvilcord.maven-publish-conventions") apply false
 }
 
 group = "io.github.yvancywan"
 description = "Gradle plugin for AnvilCord plugin host projects"
+version = providers.gradleProperty("verison")
+    .orElse(providers.gradleProperty("version"))
+    .orElse(providers.gradleProperty("anvilCordVersion"))
+    .orElse(providers.environmentVariable("ANVILCORD_VERSION"))
+    .orElse("0.0.1-SNAPSHOT")
+    .get()
+
+apply(plugin = "anvilcord.maven-publish-conventions")
 
 repositories {
     gradlePluginPortal()
@@ -24,10 +32,6 @@ gradlePlugin {
     }
 }
 
-version = providers.gradleProperty("anvilCordVersion")
-    .orElse(providers.environmentVariable("ANVILCORD_VERSION"))
-    .orElse("0.0.1-SNAPSHOT")
-    .get()
 
 tasks.jar {
     manifest {
