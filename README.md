@@ -69,13 +69,13 @@ Override the project version for a local build or publish:
 
 ## Release versioning
 
-GitHub Actions computes the AnvilCord version from Conventional Commits with `paulhatch/semantic-version` in `.github/workflows/build-and-publish.yml`.
+GitHub Actions creates the next release tag from Conventional Commits with `mathieudutour/github-tag-action` in `.github/workflows/build-and-publish.yml`.
 
 - `feat:` commits bump the minor version.
 - Other commit types bump the patch version.
 - Commits with `!` in the header, or `BREAKING CHANGE:` / `BREAKING-CHANGE:` in the body, bump the major version.
 
-Pushes to `main` publish the next calculated snapshot, for example `0.1.0-SNAPSHOT`. Version tags like `v0.1.0` publish the exact release version without the leading `v`.
+Pushes to `main` create and push the next `v*.*.*` tag, then publish the exact release version without the leading `v`.
 
 The workflow passes the generated version to every Gradle invocation with `-Pverison=...`. The build also accepts `-Pversion=...`, `-PanvilCordVersion=...`, and `ANVILCORD_VERSION` as compatibility aliases.
 
