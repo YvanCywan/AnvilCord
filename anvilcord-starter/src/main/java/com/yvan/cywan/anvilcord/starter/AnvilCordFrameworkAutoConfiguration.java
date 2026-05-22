@@ -5,6 +5,7 @@ import com.yvan.cywan.anvilcord.discord.DiscordGatewayBridge;
 import com.yvan.cywan.anvilcord.discord.config.BotCoreProperties;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 
 /**
@@ -19,5 +20,10 @@ import org.springframework.context.annotation.ComponentScan;
 		FrameworkInitializationPublisher.class
 })
 public class AnvilCordFrameworkAutoConfiguration {
+
+	@Bean
+	static AnvilCordSlashCommandBeanRegistrar anvilCordSlashCommandBeanRegistrar() {
+		return new AnvilCordSlashCommandBeanRegistrar();
+	}
 }
 

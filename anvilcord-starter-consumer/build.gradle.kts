@@ -8,7 +8,6 @@ description = "Non-publishable consumer used to verify AnvilCord starter integra
 
 dependencies {
     implementation(project(":anvilcord-core"))
-    implementation("org.springframework.boot:spring-boot-starter")
 
     runtimeOnly(project(":anvilcord-starter"))
 
