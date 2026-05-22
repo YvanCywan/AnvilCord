@@ -53,15 +53,9 @@ extensions.configure<PublishingExtension> {
         maven {
             name = "mavenCentral"
             url = uri(
-                if (version.toString().endsWith("SNAPSHOT")) {
-                    providers.gradleProperty("mavenCentralSnapshotsUrl")
-                        .orElse("https://central.sonatype.com/repository/maven-snapshots/")
-                        .get()
-                } else {
-                    providers.gradleProperty("mavenCentralReleasesUrl")
-                        .orElse("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/")
-                        .get()
-                }
+                providers.gradleProperty("mavenCentralReleasesUrl")
+                    .orElse("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/")
+                    .get()
             )
             credentials(PasswordCredentials::class) {
                 username = providers.gradleProperty("mavenCentralUsername")
