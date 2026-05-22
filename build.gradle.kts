@@ -4,6 +4,6 @@ plugins {
 }
 
 group = "io.github.yvancywan"
-version = "0.0.1-SNAPSHOT"
+version = "0.0.1"
 description = "AnvilCord"
 
