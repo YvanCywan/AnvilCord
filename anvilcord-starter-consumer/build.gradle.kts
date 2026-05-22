@@ -2,16 +2,12 @@ import org.gradle.api.tasks.bundling.Jar
 
 plugins {
     id("anvilcord.java-conventions")
+    id("com.yvan.cywan.anvilcord")
 }
 
 description = "Non-publishable consumer used to verify AnvilCord starter integration."
 
 dependencies {
-    implementation(project(":anvilcord-core"))
-
-    runtimeOnly(project(":anvilcord-starter"))
-
-    testImplementation(project(":anvilcord-starter"))
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

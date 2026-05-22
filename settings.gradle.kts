@@ -1,5 +1,6 @@
 pluginManagement {
 	includeBuild("build-logic")
+	includeBuild("anvilcord-gradle-plugin")
 }
 
 rootProject.name = "AnvilCord"
