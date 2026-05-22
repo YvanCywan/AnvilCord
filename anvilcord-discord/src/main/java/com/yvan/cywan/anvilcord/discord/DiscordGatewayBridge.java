@@ -13,8 +13,9 @@ import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
 import discord4j.core.event.domain.lifecycle.DisconnectEvent;
 import discord4j.core.event.domain.lifecycle.ReadyEvent;
 import discord4j.core.object.entity.User;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
 import reactor.core.Disposable;
@@ -28,12 +29,14 @@ import reactor.core.Disposable;
  * gateway events to virtual threads where the rest of the framework runs normal
  * blocking Java.</p>
  */
+@Slf4j
 @Component
+@RequiredArgsConstructor
 public final class DiscordGatewayBridge implements SmartLifecycle {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DiscordGatewayBridge.class);
-
+    @NonNull
     private final BotCoreProperties properties;
+    @NonNull
     private final VirtualEventBus eventBus;
     private final ExecutorService virtualThreadExecutor = Executors.newVirtualThreadPerTaskExecutor();
     private final List<Consumer<ChatInputInteractionEvent>> chatInputInteractionListeners = new CopyOnWriteArrayList<>();
@@ -42,17 +45,12 @@ public final class DiscordGatewayBridge implements SmartLifecycle {
 
     private volatile GatewayDiscordClient gatewayClient;
 
-    public DiscordGatewayBridge(BotCoreProperties properties, VirtualEventBus eventBus) {
-        this.properties = Objects.requireNonNull(properties, "properties");
-        this.eventBus = Objects.requireNonNull(eventBus, "eventBus");
-    }
-
     /**
      * Registers an imperative listener for Discord slash-command interactions.
      */
     public void registerChatInputInteractionListener(Consumer<ChatInputInteractionEvent> listener) {
         chatInputInteractionListeners.add(Objects.requireNonNull(listener, "listener"));
-        LOGGER.debug("Registered ChatInputInteractionEvent listener");
+        log.debug("Registered ChatInputInteractionEvent listener");
     }
 
     /**
@@ -65,7 +63,7 @@ public final class DiscordGatewayBridge implements SmartLifecycle {
     @Override
     public void start() {
         if (!properties.hasToken()) {
-            LOGGER.warn("bot.core.token is blank; Discord gateway connection is disabled for this run");
+            log.warn("bot.core.token is blank; Discord gateway connection is disabled for this run");
             return;
         }
         if (!running.compareAndSet(false, true)) {
@@ -73,16 +71,16 @@ public final class DiscordGatewayBridge implements SmartLifecycle {
         }
 
         try {
-            LOGGER.info("Connecting to Discord gateway using a virtual-threaded framework bridge");
+            log.info("Connecting to Discord gateway using a virtual-threaded framework bridge");
             gatewayClient = DiscordClient.create(properties.requireToken()).login().block();
             if (gatewayClient == null) {
                 throw new IllegalStateException("Discord4J returned no GatewayDiscordClient from login()");
             }
             subscribeToGatewayEvents(gatewayClient);
-            LOGGER.info("Discord gateway bridge started");
+            log.info("Discord gateway bridge started");
         } catch (RuntimeException exception) {
             running.set(false);
-            LOGGER.error("Discord gateway bridge failed to start", exception);
+            log.error("Discord gateway bridge failed to start", exception);
             throw exception;
         }
     }
@@ -103,7 +101,7 @@ public final class DiscordGatewayBridge implements SmartLifecycle {
         }
 
         virtualThreadExecutor.shutdown();
-        LOGGER.info("Discord gateway bridge stopped");
+        log.info("Discord gateway bridge stopped");
     }
 
     @Override
@@ -123,17 +121,17 @@ public final class DiscordGatewayBridge implements SmartLifecycle {
     private void subscribeToGatewayEvents(GatewayDiscordClient client) {
         subscriptions.add(client.on(ReadyEvent.class).subscribe(
                 event -> virtualThreadExecutor.submit(() -> publishReadyEvent(event)),
-                error -> LOGGER.error("ReadyEvent subscription failed", error)
+                error -> log.error("ReadyEvent subscription failed", error)
         ));
 
         subscriptions.add(client.on(DisconnectEvent.class).subscribe(
                 event -> virtualThreadExecutor.submit(() -> publishDisconnectEvent(event)),
-                error -> LOGGER.error("DisconnectEvent subscription failed", error)
+                error -> log.error("DisconnectEvent subscription failed", error)
         ));
 
         subscriptions.add(client.on(ChatInputInteractionEvent.class).subscribe(
                 event -> virtualThreadExecutor.submit(() -> notifyChatInputInteractionListeners(event)),
-                error -> LOGGER.error("ChatInputInteractionEvent subscription failed", error)
+                error -> log.error("ChatInputInteractionEvent subscription failed", error)
         ));
     }
 
@@ -167,7 +165,7 @@ public final class DiscordGatewayBridge implements SmartLifecycle {
             try {
                 listener.accept(event);
             } catch (RuntimeException exception) {
-                LOGGER.error("ChatInputInteractionEvent listener failed before command dispatch", exception);
+                log.error("ChatInputInteractionEvent listener failed before command dispatch", exception);
             }
         }
     }

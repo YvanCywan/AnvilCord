@@ -5,8 +5,9 @@ import module java.base;
 import com.yvan.cywan.anvilcord.core.event.FrameworkInitializationEvent;
 import com.yvan.cywan.anvilcord.core.event.VirtualEventBus;
 import com.yvan.cywan.anvilcord.discord.command.SlashCommandOrchestrator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -15,18 +16,15 @@ import org.springframework.stereotype.Component;
  * Emits the framework initialization event after Spring has completed component
  * scanning, dependency injection, lifecycle startup, and command-line runners.
  */
+@Slf4j
 @Component
+@RequiredArgsConstructor
 public final class FrameworkInitializationPublisher {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(FrameworkInitializationPublisher.class);
-
+    @NonNull
     private final VirtualEventBus eventBus;
+    @NonNull
     private final SlashCommandOrchestrator slashCommandOrchestrator;
-
-    public FrameworkInitializationPublisher(VirtualEventBus eventBus, SlashCommandOrchestrator slashCommandOrchestrator) {
-        this.eventBus = Objects.requireNonNull(eventBus, "eventBus");
-        this.slashCommandOrchestrator = Objects.requireNonNull(slashCommandOrchestrator, "slashCommandOrchestrator");
-    }
 
     @EventListener(ApplicationReadyEvent.class)
     public void publishFrameworkInitialized() {
@@ -36,7 +34,7 @@ public final class FrameworkInitializationPublisher {
                 Instant.now()
         );
         eventBus.publish(event);
-        LOGGER.info("Framework initialization complete with {} slash command(s)", event.slashCommandNames().size());
+        log.info("Framework initialization complete with {} slash command(s)", event.slashCommandNames().size());
     }
 }
 

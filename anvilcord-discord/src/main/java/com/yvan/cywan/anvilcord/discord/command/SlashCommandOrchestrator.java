@@ -8,8 +8,7 @@ import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
 import discord4j.discordjson.json.ApplicationCommandRequest;
 import discord4j.rest.RestClient;
 import jakarta.annotation.PreDestroy;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Service;
 
@@ -18,10 +17,9 @@ import org.springframework.stereotype.Service;
  * metadata with Discord, and routes live chat-input interactions to the matching
  * command implementation.
  */
+@Slf4j
 @Service
 public final class SlashCommandOrchestrator implements CommandLineRunner {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(SlashCommandOrchestrator.class);
 
     private final BotCoreProperties properties;
     private final Map<String, SlashCommand> commandsByName;
@@ -40,7 +38,7 @@ public final class SlashCommandOrchestrator implements CommandLineRunner {
                 .toList();
 
         gatewayBridge.registerChatInputInteractionListener(this::dispatchInteraction);
-        LOGGER.info("Discovered {} slash command(s): {}", commandsByName.size(), commandsByName.keySet());
+        log.info("Discovered {} slash command(s): {}", commandsByName.size(), commandsByName.keySet());
     }
 
     /**
@@ -49,11 +47,11 @@ public final class SlashCommandOrchestrator implements CommandLineRunner {
     @Override
     public void run(String... args) {
         if (commandRequests.isEmpty()) {
-            LOGGER.info("No slash commands discovered; skipping Discord command synchronization");
+            log.info("No slash commands discovered; skipping Discord command synchronization");
             return;
         }
         if (!properties.hasToken()) {
-            LOGGER.warn("bot.core.token is blank; skipping Discord command synchronization");
+            log.warn("bot.core.token is blank; skipping Discord command synchronization");
             return;
         }
 
@@ -64,12 +62,12 @@ public final class SlashCommandOrchestrator implements CommandLineRunner {
                         "Discord REST API returned no application id"
                 ));
 
-        LOGGER.info("Synchronizing {} global slash command(s) for application {}", commandRequests.size(), applicationId);
+        log.info("Synchronizing {} global slash command(s) for application {}", commandRequests.size(), applicationId);
         restClient.getApplicationService()
                 .bulkOverwriteGlobalApplicationCommand(applicationId, commandRequests)
                 .collectList()
                 .block();
-        LOGGER.info("Slash command synchronization complete");
+        log.info("Slash command synchronization complete");
     }
 
     /**
@@ -87,7 +85,7 @@ public final class SlashCommandOrchestrator implements CommandLineRunner {
         String commandName = event.getCommandName();
         SlashCommand command = commandsByName.get(commandName);
         if (command == null) {
-            LOGGER.warn("Received unknown slash command interaction: {}", commandName);
+            log.warn("Received unknown slash command interaction: {}", commandName);
             replyBestEffort(event, "Unknown command: " + commandName);
             return;
         }
@@ -95,7 +93,7 @@ public final class SlashCommandOrchestrator implements CommandLineRunner {
         try {
             command.execute(event);
         } catch (Throwable throwable) {
-            LOGGER.error("Slash command '{}' failed", commandName, throwable);
+            log.error("Slash command '{}' failed", commandName, throwable);
             replyBestEffort(event, "Command failed. Please try again later.");
         }
     }
@@ -121,7 +119,7 @@ public final class SlashCommandOrchestrator implements CommandLineRunner {
         try {
             event.reply(message).block();
         } catch (RuntimeException replyFailure) {
-            LOGGER.warn("Unable to send slash-command error response", replyFailure);
+            log.warn("Unable to send slash-command error response", replyFailure);
         }
     }
 

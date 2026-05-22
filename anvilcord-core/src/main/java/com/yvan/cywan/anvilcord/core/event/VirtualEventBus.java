@@ -3,8 +3,7 @@ package com.yvan.cywan.anvilcord.core.event;
 import module java.base;
 
 import jakarta.annotation.PreDestroy;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
@@ -16,10 +15,9 @@ import org.springframework.stereotype.Component;
  * failure behavior easy to reason about while still allowing blocking listener
  * code to park cheaply on Project Loom virtual threads.</p>
  */
+@Slf4j
 @Component
 public final class VirtualEventBus {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(VirtualEventBus.class);
 
     private final ConcurrentMap<Class<? extends BotEvent>, CopyOnWriteArrayList<Consumer<? extends BotEvent>>> listeners =
             new ConcurrentHashMap<>();
@@ -41,7 +39,7 @@ public final class VirtualEventBus {
                 .toList();
 
         if (matchingListeners.isEmpty()) {
-            LOGGER.trace("No listeners registered for {}", event.getClass().getName());
+            log.trace("No listeners registered for {}", event.getClass().getName());
             return;
         }
 
@@ -65,7 +63,7 @@ public final class VirtualEventBus {
         Objects.requireNonNull(listener, "listener");
 
         listeners.computeIfAbsent(eventType, ignored -> new CopyOnWriteArrayList<>()).add(listener);
-        LOGGER.debug("Registered BotEvent listener for {}", eventType.getName());
+        log.debug("Registered BotEvent listener for {}", eventType.getName());
     }
 
     /**
@@ -88,7 +86,7 @@ public final class VirtualEventBus {
                 Thread.currentThread().interrupt();
                 throw new IllegalStateException("Interrupted while publishing " + event.getClass().getName(), exception);
             } catch (ExecutionException exception) {
-                LOGGER.error("BotEvent listener failed while handling {}", event.getClass().getName(), exception.getCause());
+                log.error("BotEvent listener failed while handling {}", event.getClass().getName(), exception.getCause());
             }
         }
     }
