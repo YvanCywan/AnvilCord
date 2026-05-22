@@ -7,7 +7,7 @@ import org.springframework.boot.SpringApplication;
 @AnvilCordPluginHost
 public class AnvilCordApplication {
 
-    static void main(String[] args) {
+    public static void main(String[] args) {
         SpringApplication.run(AnvilCordApplication.class, args);
     }
 }

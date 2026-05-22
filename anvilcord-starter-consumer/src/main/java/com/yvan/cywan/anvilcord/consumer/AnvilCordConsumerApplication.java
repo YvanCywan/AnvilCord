@@ -1,7 +1,6 @@
 package com.yvan.cywan.anvilcord.consumer;
 
 import com.yvan.cywan.anvilcord.core.AnvilCordPluginHost;
-import org.springframework.boot.SpringApplication;
 
 /**
  * Example host application that compiles against AnvilCord core contracts while
@@ -13,9 +12,5 @@ import org.springframework.boot.SpringApplication;
  */
 @AnvilCordPluginHost
 public class AnvilCordConsumerApplication {
-
-    static void main(String[] args) {
-        SpringApplication.run(AnvilCordConsumerApplication.class, args);
-    }
 }
 

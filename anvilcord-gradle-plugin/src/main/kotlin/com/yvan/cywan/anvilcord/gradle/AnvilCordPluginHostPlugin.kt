@@ -2,6 +2,7 @@ package com.yvan.cywan.anvilcord.gradle
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.plugins.JavaApplication
 
 /**
  * Gradle plugin for applications that host AnvilCord plugins and commands.
@@ -15,6 +16,11 @@ class AnvilCordPluginHostPlugin : Plugin<Project> {
 
     override fun apply(project: Project) {
         project.pluginManager.apply("java-library")
+        project.pluginManager.apply("application")
+
+        project.extensions.configure(JavaApplication::class.java) {
+            mainClass.convention(ANVILCORD_MAIN_CLASS)
+        }
 
         val extension = project.extensions.create(
             "anvilCord",
@@ -55,6 +61,7 @@ class AnvilCordPluginHostPlugin : Plugin<Project> {
 
     private companion object {
         const val ANVILCORD_GROUP = "com.yvan.cywan"
+        const val ANVILCORD_MAIN_CLASS = "com.yvan.cywan.anvilcord.AnvilCordApplication"
         const val DEFAULT_ANVILCORD_VERSION = "0.0.1-SNAPSHOT"
     }
 }
