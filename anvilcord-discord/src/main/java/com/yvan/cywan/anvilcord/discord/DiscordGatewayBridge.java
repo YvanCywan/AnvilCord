@@ -7,9 +7,10 @@ import com.yvan.cywan.anvilcord.core.event.BotUserProfile;
 import com.yvan.cywan.anvilcord.core.event.GatewayDisconnectEvent;
 import com.yvan.cywan.anvilcord.core.event.VirtualEventBus;
 import com.yvan.cywan.anvilcord.discord.config.BotCoreProperties;
+import com.yvan.cywan.anvilcord.discord.event.DiscordGatewayEvent;
 import discord4j.core.DiscordClient;
 import discord4j.core.GatewayDiscordClient;
-import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
+import discord4j.core.event.domain.Event;
 import discord4j.core.event.domain.lifecycle.DisconnectEvent;
 import discord4j.core.event.domain.lifecycle.ReadyEvent;
 import discord4j.core.object.entity.User;
@@ -39,19 +40,10 @@ public final class DiscordGatewayBridge implements SmartLifecycle {
     @NonNull
     private final VirtualEventBus eventBus;
     private final ExecutorService virtualThreadExecutor = Executors.newVirtualThreadPerTaskExecutor();
-    private final List<Consumer<ChatInputInteractionEvent>> chatInputInteractionListeners = new CopyOnWriteArrayList<>();
     private final List<Disposable> subscriptions = new CopyOnWriteArrayList<>();
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     private volatile GatewayDiscordClient gatewayClient;
-
-    /**
-     * Registers an imperative listener for Discord slash-command interactions.
-     */
-    public void registerChatInputInteractionListener(Consumer<ChatInputInteractionEvent> listener) {
-        chatInputInteractionListeners.add(Objects.requireNonNull(listener, "listener"));
-        log.debug("Registered ChatInputInteractionEvent listener");
-    }
 
     /**
      * @return the connected gateway client when the bot is online.
@@ -119,20 +111,19 @@ public final class DiscordGatewayBridge implements SmartLifecycle {
     }
 
     private void subscribeToGatewayEvents(GatewayDiscordClient client) {
-        subscriptions.add(client.on(ReadyEvent.class).subscribe(
-                event -> virtualThreadExecutor.submit(() -> publishReadyEvent(event)),
-                error -> log.error("ReadyEvent subscription failed", error)
+        subscriptions.add(client.on(Event.class).subscribe(
+                event -> virtualThreadExecutor.submit(() -> publishGatewayEvent(event)),
+                error -> log.error("Discord gateway event subscription failed", error)
         ));
+    }
 
-        subscriptions.add(client.on(DisconnectEvent.class).subscribe(
-                event -> virtualThreadExecutor.submit(() -> publishDisconnectEvent(event)),
-                error -> log.error("DisconnectEvent subscription failed", error)
-        ));
-
-        subscriptions.add(client.on(ChatInputInteractionEvent.class).subscribe(
-                event -> virtualThreadExecutor.submit(() -> notifyChatInputInteractionListeners(event)),
-                error -> log.error("ChatInputInteractionEvent subscription failed", error)
-        ));
+    private void publishGatewayEvent(Event event) {
+        eventBus.publish(new DiscordGatewayEvent(event, Instant.now()));
+        if (event instanceof ReadyEvent readyEvent) {
+            publishReadyEvent(readyEvent);
+        } else if (event instanceof DisconnectEvent disconnectEvent) {
+            publishDisconnectEvent(disconnectEvent);
+        }
     }
 
     private void publishReadyEvent(ReadyEvent event) {
@@ -159,15 +150,4 @@ public final class DiscordGatewayBridge implements SmartLifecycle {
                 Instant.now()
         ));
     }
-
-    private void notifyChatInputInteractionListeners(ChatInputInteractionEvent event) {
-        for (Consumer<ChatInputInteractionEvent> listener : chatInputInteractionListeners) {
-            try {
-                listener.accept(event);
-            } catch (RuntimeException exception) {
-                log.error("ChatInputInteractionEvent listener failed before command dispatch", exception);
-            }
-        }
-    }
 }
-

@@ -10,6 +10,8 @@ import com.yvan.cywan.anvilcord.core.event.VirtualEventBus;
 import com.yvan.cywan.anvilcord.discord.command.SlashCommand;
 import com.yvan.cywan.anvilcord.discord.command.SlashCommandOrchestrator;
 import com.yvan.cywan.anvilcord.discord.config.BotCoreProperties;
+import com.yvan.cywan.anvilcord.discord.event.DiscordGatewayEvent;
+import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,6 +19,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 @SpringBootTest(
         classes = {
@@ -34,6 +37,8 @@ final class AnvilCordConsumerApplicationTests {
             "com.yvan.cywan.anvilcord.example.plugin.ExamplePluginInitializedEvent";
     private static final String EXAMPLE_PLUGIN_OBSERVED_BOT_READY_EVENT =
             "com.yvan.cywan.anvilcord.example.plugin.ExamplePluginObservedBotReadyEvent";
+    private static final String EXAMPLE_PLUGIN_OBSERVED_DISCORD_EVENT =
+            "com.yvan.cywan.anvilcord.example.plugin.ExamplePluginObservedDiscordEvent";
 
     @Autowired
     private VirtualEventBus eventBus;
@@ -71,6 +76,10 @@ final class AnvilCordConsumerApplicationTests {
         ));
         assertThat(frameworkInitializationProbe.awaitPluginObservedBotReady().getClass().getName())
                 .isEqualTo(EXAMPLE_PLUGIN_OBSERVED_BOT_READY_EVENT);
+
+        eventBus.publish(new DiscordGatewayEvent(mock(ChatInputInteractionEvent.class), Instant.now()));
+        assertThat(frameworkInitializationProbe.awaitPluginObservedDiscordEvent().getClass().getName())
+                .isEqualTo(EXAMPLE_PLUGIN_OBSERVED_DISCORD_EVENT);
     }
 
     @TestConfiguration
@@ -87,9 +96,11 @@ final class AnvilCordConsumerApplicationTests {
         private final CountDownLatch initialized = new CountDownLatch(1);
         private final CountDownLatch pluginInitialized = new CountDownLatch(1);
         private final CountDownLatch pluginObservedBotReady = new CountDownLatch(1);
+        private final CountDownLatch pluginObservedDiscordEvent = new CountDownLatch(1);
         private final AtomicReference<FrameworkInitializationEvent> event = new AtomicReference<>();
         private final AtomicReference<BotEvent> pluginInitializedEvent = new AtomicReference<>();
         private final AtomicReference<BotEvent> pluginObservedBotReadyEvent = new AtomicReference<>();
+        private final AtomicReference<BotEvent> pluginObservedDiscordEventValue = new AtomicReference<>();
 
         FrameworkInitializationProbe(VirtualEventBus eventBus) {
             eventBus.registerListener(BotEvent.class, this::recordPluginEvent);
@@ -114,6 +125,11 @@ final class AnvilCordConsumerApplicationTests {
             return pluginObservedBotReadyEvent.get();
         }
 
+        BotEvent awaitPluginObservedDiscordEvent() throws InterruptedException {
+            assertThat(pluginObservedDiscordEvent.await(5, TimeUnit.SECONDS)).isTrue();
+            return pluginObservedDiscordEventValue.get();
+        }
+
         private void recordPluginEvent(BotEvent event) {
             String eventTypeName = event.getClass().getName();
             if (EXAMPLE_PLUGIN_INITIALIZED_EVENT.equals(eventTypeName)) {
@@ -122,6 +138,9 @@ final class AnvilCordConsumerApplicationTests {
             } else if (EXAMPLE_PLUGIN_OBSERVED_BOT_READY_EVENT.equals(eventTypeName)) {
                 pluginObservedBotReadyEvent.set(event);
                 pluginObservedBotReady.countDown();
+            } else if (EXAMPLE_PLUGIN_OBSERVED_DISCORD_EVENT.equals(eventTypeName)) {
+                pluginObservedDiscordEventValue.set(event);
+                pluginObservedDiscordEvent.countDown();
             }
         }
     }

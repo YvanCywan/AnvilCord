@@ -3,6 +3,7 @@ package com.yvan.cywan.anvilcord.example.plugin;
 import com.yvan.cywan.anvilcord.core.event.BotReadyEvent;
 import com.yvan.cywan.anvilcord.core.plugin.AnvilCordPlugin;
 import com.yvan.cywan.anvilcord.core.plugin.AnvilCordPluginContext;
+import com.yvan.cywan.anvilcord.discord.event.DiscordGatewayEvent;
 
 import java.time.Instant;
 
@@ -22,6 +23,11 @@ public final class ExampleAnvilCordPlugin implements AnvilCordPlugin {
         context.registerListener(BotReadyEvent.class, event -> context.publish(new ExamplePluginObservedBotReadyEvent(
                 id(),
                 event.userProfile().username(),
+                Instant.now()
+        )));
+        context.registerListener(DiscordGatewayEvent.class, event -> context.publish(new ExamplePluginObservedDiscordEvent(
+                id(),
+                event.discordEvent().getClass().getName(),
                 Instant.now()
         )));
     }

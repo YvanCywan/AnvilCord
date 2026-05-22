@@ -2,8 +2,9 @@ package com.yvan.cywan.anvilcord.discord.command;
 
 import module java.base;
 
-import com.yvan.cywan.anvilcord.discord.DiscordGatewayBridge;
+import com.yvan.cywan.anvilcord.core.event.VirtualEventBus;
 import com.yvan.cywan.anvilcord.discord.config.BotCoreProperties;
+import com.yvan.cywan.anvilcord.discord.event.DiscordGatewayEvent;
 import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
 import discord4j.discordjson.json.ApplicationCommandRequest;
 import discord4j.rest.RestClient;
@@ -29,7 +30,7 @@ public final class SlashCommandOrchestrator implements CommandLineRunner {
     public SlashCommandOrchestrator(
             List<SlashCommand> slashCommands,
             BotCoreProperties properties,
-            DiscordGatewayBridge gatewayBridge
+            VirtualEventBus eventBus
     ) {
         this.properties = Objects.requireNonNull(properties, "properties");
         this.commandsByName = indexCommands(slashCommands == null ? List.of() : slashCommands);
@@ -37,7 +38,7 @@ public final class SlashCommandOrchestrator implements CommandLineRunner {
                 .map(SlashCommand::commandRequest)
                 .toList();
 
-        gatewayBridge.registerChatInputInteractionListener(this::dispatchInteraction);
+        eventBus.registerListener(DiscordGatewayEvent.class, this::dispatchGatewayEvent);
         log.info("Discovered {} slash command(s): {}", commandsByName.size(), commandsByName.keySet());
     }
 
@@ -75,6 +76,12 @@ public final class SlashCommandOrchestrator implements CommandLineRunner {
      */
     public List<String> commandNames() {
         return List.copyOf(commandsByName.keySet());
+    }
+
+    private void dispatchGatewayEvent(DiscordGatewayEvent event) {
+        if (event.discordEvent() instanceof ChatInputInteractionEvent chatInputInteractionEvent) {
+            dispatchInteraction(chatInputInteractionEvent);
+        }
     }
 
     private void dispatchInteraction(ChatInputInteractionEvent event) {
