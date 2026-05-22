@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: AnvilCord
+  threads:
+    virtual:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.yvan.cywan.anvilcord: DEBUG
+    discord4j: INFO
+    reactor.netty: WARN
+
+bot:
+  core:
+    # Prefer BOT_CORE_TOKEN in production. Leave blank to start the framework
+    # without connecting to Discord, which keeps local tests deterministic.
+    token: ${BOT_CORE_TOKEN:}
+    # Discord application id. Optional at startup, but required for command sync.
+    application-id: ${BOT_CORE_APPLICATION_ID:}
+

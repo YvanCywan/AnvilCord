@@ -21,20 +21,19 @@ repositories {
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter")
-    implementation("org.springframework.boot:spring-boot-autoconfigure")
-    implementation("org.springframework.boot:spring-boot-configuration-processor")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
-    compileOnly("org.projectlombok:lombok")
-    developmentOnly("org.springframework.boot:spring-boot-devtools")
-    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
-    annotationProcessor("org.projectlombok:lombok")
+    implementation("com.discord4j:discord4j-core:3.2.6")
 
-    testImplementation("org.springframework.boot:spring-boot-starter-actuator-test")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testCompileOnly("org.projectlombok:lombok")
+    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
+
+    developmentOnly("org.springframework.boot:spring-boot-devtools")
+
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    testAnnotationProcessor("org.projectlombok:lombok")
+}
+
+tasks.withType<JavaCompile> {
+    options.compilerArgs.add("-parameters")
 }
 
 tasks.withType<Test> {
