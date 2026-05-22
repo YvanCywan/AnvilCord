@@ -20,8 +20,8 @@ jobs:
     timeout-minutes: 30
 
     env:
-      MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_USER }}
-      MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_PASS }}
+      MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+      MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
       SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
       SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
 
