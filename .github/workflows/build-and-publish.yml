@@ -83,10 +83,10 @@ jobs:
           echo "Base tag: ${{ steps.semantic-version.outputs.version_tag }}"
 
       - name: Build main project
-        run: ./gradlew build -Pverison=${{ steps.semver.outputs.version }} --stacktrace
+        run: ./gradlew build -Pverison=${{ steps.semver.outputs.version }}
 
       - name: Build included Gradle plugin
-        run: ./gradlew -p anvilcord-gradle-plugin build -Pverison=${{ steps.semver.outputs.version }} --stacktrace
+        run: ./gradlew -p anvilcord-gradle-plugin build -Pverison=${{ steps.semver.outputs.version }}
 
   publish:
     name: Publish
