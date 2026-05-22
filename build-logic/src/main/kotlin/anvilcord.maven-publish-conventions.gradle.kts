@@ -71,7 +71,7 @@ extensions.configure<PublishingExtension> {
                     .orElse(providers.environmentVariable("MAVEN_CENTRAL_PASSWORD"))
                     .orNull
             }
-        }U
+        }
 
     publications.withType<MavenPublication>().configureEach {
         versionMapping {
