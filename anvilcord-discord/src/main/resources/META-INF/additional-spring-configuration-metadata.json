@@ -4,13 +4,13 @@
       "name": "bot.core.token",
       "type": "java.lang.String",
       "description": "Discord bot token used by the framework-owned gateway and REST clients. Prefer BOT_CORE_TOKEN in production.",
-      "sourceType": "com.yvan.cywan.anvilcord.discord.config.BotCoreProperties"
+      "sourceType": "io.github.yvancywan.anvilcord.discord.config.BotCoreProperties"
     },
     {
       "name": "bot.core.application-id",
       "type": "java.lang.String",
       "description": "Discord application snowflake used for slash-command synchronization. If omitted, the framework resolves it from Discord's REST API when a token is present.",
-      "sourceType": "com.yvan.cywan.anvilcord.discord.config.BotCoreProperties"
+      "sourceType": "io.github.yvancywan.anvilcord.discord.config.BotCoreProperties"
     }
   ]
 }

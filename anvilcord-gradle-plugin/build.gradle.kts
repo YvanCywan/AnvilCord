@@ -1,10 +1,10 @@
 plugins {
     `kotlin-dsl`
     `java-gradle-plugin`
-    `maven-publish`
+    id("anvilcord.maven-publish-conventions")
 }
 
-group = "com.yvan.cywan"
+group = "io.github.yvancywan"
 version = "0.0.1-SNAPSHOT"
 description = "Gradle plugin for AnvilCord plugin host projects"
 

@@ -1,5 +1,6 @@
 plugins {
     id("anvilcord.java-conventions")
+    id("anvilcord.maven-publish-conventions")
     id("org.springframework.boot")
     id("org.graalvm.buildtools.native")
 }
