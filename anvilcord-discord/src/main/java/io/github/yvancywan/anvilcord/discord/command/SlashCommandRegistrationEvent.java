@@ -10,7 +10,7 @@ import java.util.Objects;
  */
 //noinspection unused
 @SuppressWarnings({"unused", "UnusedDeclaration"})
-public record SlashCommandRegistrationEvent(SlashCommand command, Instant occurredAt) implements BotEvent {
+public record SlashCommandRegistrationEvent(SlashCommandDefinition command, Instant occurredAt) implements BotEvent {
 
     public SlashCommandRegistrationEvent {
         Objects.requireNonNull(command, "command");

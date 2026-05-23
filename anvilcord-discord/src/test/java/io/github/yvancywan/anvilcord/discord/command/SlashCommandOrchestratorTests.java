@@ -28,7 +28,7 @@ final class SlashCommandOrchestratorTests {
     void discoversCommandsAndSkipsDiscordSyncWhenTokenIsBlank() {
         VirtualEventBus eventBus = new VirtualEventBus();
         SlashCommandOrchestrator orchestrator = new SlashCommandOrchestrator(
-                List.of(new SlashCommand("alpha", "Test command alpha"), new SlashCommand("beta", "Test command beta")),
+                List.of(new SimpleSlashCommand("alpha", "Test command alpha"), new SimpleSlashCommand("beta", "Test command beta")),
                 new BotCoreProperties("", ""),
                 eventBus
         );
@@ -48,7 +48,7 @@ final class SlashCommandOrchestratorTests {
 
         try {
             assertThatThrownBy(() -> new SlashCommandOrchestrator(
-                    of(new SlashCommand("duplicate", "first"), new SlashCommand("duplicate", "second")),
+                    of(new SimpleSlashCommand("duplicate", "first"), new SimpleSlashCommand("duplicate", "second")),
                     new BotCoreProperties("", ""),
                     eventBus
             )).isInstanceOf(IllegalStateException.class)
@@ -63,7 +63,7 @@ final class SlashCommandOrchestratorTests {
         VirtualEventBus eventBus = new VirtualEventBus();
         CountDownLatch invoked = new CountDownLatch(1);
         SlashCommandOrchestrator orchestrator = new SlashCommandOrchestrator(
-                List.of(new SlashCommand("alpha", "Test command alpha")),
+                List.of(new SimpleSlashCommand("alpha", "Test command alpha")),
                 new BotCoreProperties("", ""),
                 eventBus
         );
@@ -92,7 +92,7 @@ final class SlashCommandOrchestratorTests {
         );
 
         try {
-            eventBus.publish(new SlashCommandRegistrationEvent(new SlashCommand("plugin", "Plugin command"), Instant.now()));
+            eventBus.publish(new SlashCommandRegistrationEvent(new SimpleSlashCommand("plugin", "Plugin command"), Instant.now()));
 
             assertThat(orchestrator.commandNames()).containsExactly("plugin");
         } finally {
@@ -107,7 +107,7 @@ final class SlashCommandOrchestratorTests {
         CountDownLatch invoked = new CountDownLatch(1);
         CountDownLatch succeeded = new CountDownLatch(1);
         SlashCommandOrchestrator orchestrator = new SlashCommandOrchestrator(
-                List.of(new SlashCommand("alpha", "Test command alpha")),
+                List.of(new SimpleSlashCommand("alpha", "Test command alpha")),
                 new BotCoreProperties("", ""),
                 eventBus
         );

@@ -18,7 +18,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Service;
 
 /**
- * Discovers framework {@link SlashCommand} models, synchronizes their metadata
+ * Discovers framework {@link SlashCommandDefinition} models, synchronizes their metadata
  * with Discord, and publishes live chat-input interactions to the event bus.
  */
 @Slf4j
@@ -27,12 +27,12 @@ public final class SlashCommandOrchestrator implements CommandLineRunner {
 
     private final BotCoreProperties properties;
     private final VirtualEventBus eventBus;
-    private final ConcurrentMap<String, SlashCommand> commandsByName = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, SlashCommandDefinition> commandsByName = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, ChatInputInteractionEvent> pendingInteractions = new ConcurrentHashMap<>();
     private final ExecutorService virtualThreadExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
     public SlashCommandOrchestrator(
-            List<SlashCommand> slashCommands,
+            List<SlashCommandDefinition> slashCommands,
             BotCoreProperties properties,
             VirtualEventBus eventBus
     ) {
@@ -95,7 +95,7 @@ public final class SlashCommandOrchestrator implements CommandLineRunner {
 
     private void publishInvocation(ChatInputInteractionEvent event) {
         String commandName = event.getCommandName();
-        SlashCommand command = commandsByName.get(commandName);
+        SlashCommandDefinition command = commandsByName.get(commandName);
         if (command == null) {
             log.warn("Received unknown slash command interaction: {}", commandName);
             replyBestEffort(event, "Unknown command: " + commandName);
@@ -116,8 +116,8 @@ public final class SlashCommandOrchestrator implements CommandLineRunner {
         ));
     }
 
-    private void registerCommands(List<SlashCommand> slashCommands) {
-        for (SlashCommand command : slashCommands) {
+    private void registerCommands(List<SlashCommandDefinition> slashCommands) {
+        for (SlashCommandDefinition command : slashCommands) {
             registerCommand(command);
         }
     }
@@ -126,9 +126,9 @@ public final class SlashCommandOrchestrator implements CommandLineRunner {
         registerCommand(event.command());
     }
 
-    private void registerCommand(SlashCommand command) {
+    private void registerCommand(SlashCommandDefinition command) {
         Objects.requireNonNull(command, "command");
-        SlashCommand previous = commandsByName.putIfAbsent(command.name(), command);
+        SlashCommandDefinition previous = commandsByName.putIfAbsent(command.name(), command);
         if (previous != null && !previous.equals(command)) {
             throw new IllegalStateException("Duplicate slash-command name '" + command.name() + "'");
         }
@@ -169,12 +169,12 @@ public final class SlashCommandOrchestrator implements CommandLineRunner {
 
     private List<ApplicationCommandRequest> commandRequests() {
         return commandsByName.values().stream()
-                .sorted(Comparator.comparing(SlashCommand::name))
+                .sorted(Comparator.comparing(SlashCommandDefinition::name))
                 .map(SlashCommandOrchestrator::toDiscordRequest)
                 .toList();
     }
 
-    private static ApplicationCommandRequest toDiscordRequest(SlashCommand command) {
+    private static ApplicationCommandRequest toDiscordRequest(SlashCommandDefinition command) {
         var builder = ApplicationCommandRequest.builder()
                 .name(command.name())
                 .description(command.description());
@@ -184,7 +184,7 @@ public final class SlashCommandOrchestrator implements CommandLineRunner {
         return builder.build();
     }
 
-    private static ApplicationCommandOptionData toDiscordOption(SlashCommand.Option option) {
+    private static ApplicationCommandOptionData toDiscordOption(SlashCommandDefinition.Option option) {
         return ApplicationCommandOptionData.builder()
                 .name(option.name())
                 .description(option.description())

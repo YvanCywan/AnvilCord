@@ -4,7 +4,6 @@ import io.github.yvancywan.anvilcord.core.event.BotReadyEvent;
 import io.github.yvancywan.anvilcord.core.plugin.AnvilCordPlugin;
 import io.github.yvancywan.anvilcord.core.plugin.AnvilCordPluginContext;
 import io.github.yvancywan.anvilcord.discord.command.SlashCommandInvocationEvent;
-import io.github.yvancywan.anvilcord.discord.command.SlashCommandRegistrationEvent;
 import io.github.yvancywan.anvilcord.discord.event.DiscordBotActions;
 import io.github.yvancywan.anvilcord.discord.event.DiscordGatewayEvent;
 
@@ -23,7 +22,6 @@ public final class ExampleAnvilCordPlugin implements AnvilCordPlugin {
     @Override
     public void initialize(AnvilCordPluginContext context) {
         context.publish(new ExamplePluginInitializedEvent(id(), Instant.now()));
-        context.publish(new SlashCommandRegistrationEvent(ExampleRuntimeCommand.definition(), Instant.now()));
         context.registerListener(BotReadyEvent.class, event -> context.publish(new ExamplePluginObservedBotReadyEvent(
                 id(),
                 event.userProfile().username(),
@@ -35,7 +33,7 @@ public final class ExampleAnvilCordPlugin implements AnvilCordPlugin {
                 Instant.now()
         )));
         context.registerListener(SlashCommandInvocationEvent.class, event -> {
-            if (!ExampleRuntimeCommand.definition().name().equals(event.commandName())) {
+            if (!ExampleRuntimeCommand.NAME.equals(event.commandName())) {
                 return;
             }
             context.publish(new DiscordBotActions.RespondToInteraction(

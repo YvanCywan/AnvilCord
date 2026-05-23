@@ -177,16 +177,21 @@ These immutable snapshot records are reused by gateway events.
 | `WebhooksUpdated` | `guildId`, `channelId`, `occurredAt`. |
 | `InteractionReceived` | `interactionId`, `applicationId`, `channelId`, `guildId`, `userId`, `interactionType`, `occurredAt`. This event is for generic interaction observation. Slash commands also publish `SlashCommandInvocationEvent`. |
 
-## Slash-command model and invocation events
+## Slash-command annotation, model, and invocation events
 
-`SlashCommand` is a model record made from standard Java values: `name`, `description`, and optional `List<SlashCommand.Option>`. The Discord module adapts this model into Discord4J `ApplicationCommandRequest` objects internally.
+`SlashCommand` is a class-level annotation made from standard Java values: `name`, `description`, and optional `SlashCommand.Option` entries. The starter scans host and plugin packages for annotated classes and registers lightweight `SlashCommandDefinition` wrappers automatically; the Discord module adapts those wrappers into Discord4J `ApplicationCommandRequest` objects internally.
 
-Plugins can contribute commands by publishing `SlashCommandRegistrationEvent` during plugin initialization:
+Typical plugin command declaration:
 
 ```java
-SlashCommand command = new SlashCommand("announce", "Publishes an announcement.");
-context.publish(new SlashCommandRegistrationEvent(command, Instant.now()));
+@SlashCommand(name = "announce", description = "Publishes an announcement.")
+final class AnnounceCommand {
+    private AnnounceCommand() {
+    }
+}
 ```
+
+Advanced integrations can contribute dynamically generated commands by publishing `SlashCommandRegistrationEvent` with a `SlashCommandDefinition`, for example a `SimpleSlashCommand`, during plugin initialization.
 
 When Discord invokes a registered chat-input command, `SlashCommandOrchestrator` publishes `SlashCommandInvocationEvent` with:
 

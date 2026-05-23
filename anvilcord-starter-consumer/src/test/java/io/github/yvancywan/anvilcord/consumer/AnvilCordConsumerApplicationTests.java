@@ -7,7 +7,7 @@ import io.github.yvancywan.anvilcord.core.event.BotReadyEvent;
 import io.github.yvancywan.anvilcord.core.event.BotUserProfile;
 import io.github.yvancywan.anvilcord.core.event.FrameworkInitializationEvent;
 import io.github.yvancywan.anvilcord.core.event.VirtualEventBus;
-import io.github.yvancywan.anvilcord.discord.command.SlashCommand;
+import io.github.yvancywan.anvilcord.discord.command.SlashCommandDefinition;
 import io.github.yvancywan.anvilcord.discord.command.SlashCommandOrchestrator;
 import io.github.yvancywan.anvilcord.discord.config.BotCoreProperties;
 import io.github.yvancywan.anvilcord.discord.event.DiscordGatewayEvent;
@@ -47,7 +47,7 @@ final class AnvilCordConsumerApplicationTests {
     @Autowired
     private BotCoreProperties botCoreProperties;
     @Autowired
-    private List<SlashCommand> slashCommands;
+    private List<SlashCommandDefinition> slashCommands;
     @Autowired
     private FrameworkInitializationProbe frameworkInitializationProbe;
 
@@ -56,8 +56,8 @@ final class AnvilCordConsumerApplicationTests {
         assertThat(eventBus).isNotNull();
         assertThat(botCoreProperties.hasToken()).isFalse();
         assertThat(slashCommands)
-                .extracting(SlashCommand::name)
-                .containsExactlyInAnyOrder("consumer-echo", "ping");
+                .extracting(SlashCommandDefinition::name)
+                .containsExactlyInAnyOrder("consumer-echo", "example-runtime", "ping");
         assertThat(slashCommandOrchestrator.commandNames())
                 .containsExactlyInAnyOrder("consumer-echo", "example-runtime", "ping");
 
@@ -88,11 +88,6 @@ final class AnvilCordConsumerApplicationTests {
         @Bean
         FrameworkInitializationProbe frameworkInitializationProbe(VirtualEventBus eventBus) {
             return new FrameworkInitializationProbe(eventBus);
-        }
-
-        @Bean
-        SlashCommand consumerEchoSlashCommand() {
-            return ConsumerEchoCommand.definition();
         }
     }
 

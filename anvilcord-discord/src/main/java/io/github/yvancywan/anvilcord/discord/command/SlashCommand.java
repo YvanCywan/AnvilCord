@@ -1,72 +1,63 @@
 package io.github.yvancywan.anvilcord.discord.command;
 
-import java.util.List;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * Framework-level slash-command definition made only of standard Java values.
+ * Marks a class as a slash-command definition.
  *
- * <p>Plugin modules can publish or contribute this model without compiling
- * against Discord4J. The Discord module adapts it into Discord application
- * command requests and publishes invocation events back to the shared event bus.</p>
+ * <p>The annotated class does not need to be a Spring bean or implement a
+ * framework interface. The starter scans host and plugin packages for this
+ * annotation and registers a small {@link SlashCommandDefinition} wrapper that
+ * the Discord command orchestrator can synchronize with Discord.</p>
  */
-public record SlashCommand(String name, String description, List<Option> options) {
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface SlashCommand {
 
     /**
-     * Creates a command without options.
-     *
-     * @param name        Discord command name
-     * @param description user-facing command description
+     * @return Discord command name
      */
-    public SlashCommand(String name, String description) {
-        this(name, description, List.of());
-    }
+    String name();
 
     /**
-     * Normalizes and validates command metadata.
+     * @return user-facing command description
      */
-    public SlashCommand {
-        name = requireText(name, "name");
-        description = requireText(description, "description");
-        options = List.copyOf(options == null ? List.of() : options);
-    }
+    String description();
 
-    /** Standard Java representation of a slash-command option. */
-    public record Option(String name, String description, OptionType type, boolean required) {
-        public Option {
-            name = requireText(name, "option name");
-            description = requireText(description, "option description");
-            type = type == null ? OptionType.STRING : type;
-        }
-    }
+    /**
+     * @return command options in Discord display order
+     */
+    Option[] options() default {};
 
-    /** Supported option kinds mapped by {@code anvilcord-discord} to Discord option types. */
-    public enum OptionType {
-        STRING(3),
-        INTEGER(4),
-        BOOLEAN(5),
-        USER(6),
-        CHANNEL(7),
-        ROLE(8),
-        NUMBER(10);
-
-        private final int discordType;
-
-        OptionType(int discordType) {
-            this.discordType = discordType;
-        }
+    /** Slash-command option metadata declared directly on the annotation. */
+    @Target({})
+    @Retention(RetentionPolicy.RUNTIME)
+    @Documented
+    @interface Option {
 
         /**
-         * @return Discord application-command option type integer.
+         * @return Discord option name
          */
-        public int discordType() {
-            return discordType;
-        }
-    }
+        String name();
 
-    private static String requireText(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException("Slash command " + fieldName + " must not be blank");
-        }
-        return value;
+        /**
+         * @return user-facing option description
+         */
+        String description();
+
+        /**
+         * @return option kind
+         */
+        SlashCommandOptionType type() default SlashCommandOptionType.STRING;
+
+        /**
+         * @return whether Discord should require the option
+         */
+        boolean required() default false;
     }
 }

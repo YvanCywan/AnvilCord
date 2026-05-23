@@ -20,7 +20,7 @@ public final class PingCommandResponder {
     }
 
     private void onSlashCommandInvoked(SlashCommandInvocationEvent event) {
-        if (!PingCommand.definition().name().equals(event.commandName())) {
+        if (!PingCommand.NAME.equals(event.commandName())) {
             return;
         }
         eventBus.publish(new DiscordBotActions.RespondToInteraction(

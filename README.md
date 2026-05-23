@@ -17,7 +17,7 @@ This is a multi-module Gradle build.
 | Module | Purpose |
 | --- | --- |
 | `anvilcord-core` | Core public API: `@AnvilCordPluginHost`, plugin contracts, plugin context, framework events, and the virtual event bus. |
-| `anvilcord-discord` | Discord-specific integration built on Discord4J, including gateway lifecycle support, bot configuration properties, Discord events, and the `SlashCommand` model/orchestrator. |
+| `anvilcord-discord` | Discord-specific integration built on Discord4J, including gateway lifecycle support, bot configuration properties, Discord events, and the `@SlashCommand` annotation/orchestrator. |
 | `anvilcord-starter` | Spring Boot starter/runtime application. It auto-configures the event bus, Discord gateway bridge, plugin discovery, command discovery, and default framework beans. |
 | `anvilcord-gradle-plugin` | Gradle plugin published as `io.github.yvancywan.anvilcord`; it configures host applications with AnvilCord dependencies and the starter main class. |
 | `anvilcord-example-plugin` | Example runtime-only plugin jar that demonstrates `ServiceLoader` registration, event listeners, custom events, and a slash command. |
@@ -224,7 +224,7 @@ By default, AnvilCord scans the plugin implementation package and subpackages. O
 
 ## Creating slash commands
 
-Commands are plain Java model objects. Plugins register them by publishing `SlashCommandRegistrationEvent`, then handle `SlashCommandInvocationEvent` through the event bus and respond with `DiscordBotActions.RespondToInteraction`:
+Commands are plain Java classes marked with `@SlashCommand`. They do not need to be Spring beans or implement a framework interface; AnvilCord scans host and plugin packages and registers a lightweight command definition wrapper automatically. Handle `SlashCommandInvocationEvent` through the event bus and respond with `DiscordBotActions.RespondToInteraction`:
 
 ```java
 package com.example.plugin;
@@ -233,13 +233,12 @@ import io.github.yvancywan.anvilcord.core.plugin.AnvilCordPlugin;
 import io.github.yvancywan.anvilcord.core.plugin.AnvilCordPluginContext;
 import io.github.yvancywan.anvilcord.discord.command.SlashCommand;
 import io.github.yvancywan.anvilcord.discord.command.SlashCommandInvocationEvent;
-import io.github.yvancywan.anvilcord.discord.command.SlashCommandRegistrationEvent;
 import io.github.yvancywan.anvilcord.discord.event.DiscordBotActions;
 
 import java.time.Instant;
 
 public final class HelloPlugin implements AnvilCordPlugin {
-    private static final SlashCommand HELLO = new SlashCommand("hello", "Replies with a greeting.");
+    private static final String HELLO = "hello";
 
     @Override
     public String id() {
@@ -248,9 +247,8 @@ public final class HelloPlugin implements AnvilCordPlugin {
 
     @Override
     public void initialize(AnvilCordPluginContext context) {
-        context.publish(new SlashCommandRegistrationEvent(HELLO, Instant.now()));
         context.registerListener(SlashCommandInvocationEvent.class, event -> {
-            if (!HELLO.name().equals(event.commandName())) {
+            if (!HELLO.equals(event.commandName())) {
                 return;
             }
             context.publish(new DiscordBotActions.RespondToInteraction(
@@ -262,9 +260,15 @@ public final class HelloPlugin implements AnvilCordPlugin {
         });
     }
 }
+
+@SlashCommand(name = "hello", description = "Replies with a greeting.")
+final class HelloCommand {
+    private HelloCommand() {
+    }
+}
 ```
 
-The Discord module adapts `SlashCommand` models into Discord application-command metadata during startup. Live Discord interactions are converted back into `SlashCommandInvocationEvent` records so plugin code can stay event-driven and avoid Discord4J types.
+The Discord module adapts discovered `SlashCommandDefinition` wrappers into Discord application-command metadata during startup. Live Discord interactions are converted back into `SlashCommandInvocationEvent` records so plugin code can stay event-driven and avoid Discord4J types. Advanced integrations can still publish `SlashCommandRegistrationEvent` with a `SlashCommandDefinition` when command metadata must be produced dynamically at runtime.
 
 ## Reacting to Discord events and requesting bot actions
 
