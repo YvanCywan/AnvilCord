@@ -4,17 +4,23 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import java.io.DataInputStream
 import java.io.File
-import java.lang.reflect.Modifier
-import java.net.URLClassLoader
 import java.util.TreeSet
+
+private const val TARGET_PLUGIN_CLASS_NAME = "io.github.yvancywan.anvilcord.core.plugin.AnvilCordPlugin"
+private const val CLASS_FILE_MAGIC = -889275714
+private const val ACC_PUBLIC = 0x0001
+private const val ACC_INTERFACE = 0x0200
+private const val ACC_ABSTRACT = 0x0400
+
+private fun Int.hasFlag(flag: Int): Boolean = this and flag != 0
 
 /**
  * Generates the Java ServiceLoader descriptor used by AnvilCord runtime plugin discovery.
@@ -25,9 +31,6 @@ abstract class GenerateAnvilCordPluginServiceFile : DefaultTask() {
     @get:InputFiles
     @get:PathSensitive(PathSensitivity.RELATIVE)
     val classesDirs: ConfigurableFileCollection = project.objects.fileCollection()
-
-    @get:Classpath
-    val classpath: ConfigurableFileCollection = project.objects.fileCollection()
 
     @get:InputFiles
     @get:Optional
@@ -70,74 +73,177 @@ abstract class GenerateAnvilCordPluginServiceFile : DefaultTask() {
             return emptySet()
         }
 
-        val urls = (classDirectories + classpath.files)
-            .filter { it.exists() }
-            .distinctBy { it.canonicalFile }
-            .map { it.toURI().toURL() }
-            .toTypedArray()
+        val classInfos = classDirectories
+            .asSequence()
+            .flatMap { classDirectory -> classFilesIn(classDirectory) }
+            .mapNotNull { classFile -> readClassInfo(classFile) }
+            .associateBy { it.name }
 
-        URLClassLoader(urls, null).use { loader ->
-            val pluginType = try {
-                loader.loadClass(ANVILCORD_PLUGIN_CLASS_NAME)
-            } catch (_: ClassNotFoundException) {
-                logger.info("AnvilCordPlugin is not on the compile classpath; no ServiceLoader descriptor generated")
-                return emptySet()
-            }
-
-            return classDirectories
-                .asSequence()
-                .flatMap { classDirectory -> classNamesIn(classDirectory) }
-                .filterNot { it == ANVILCORD_PLUGIN_CLASS_NAME }
-                .mapNotNull { className -> loadProviderClassName(loader, pluginType, className) }
-                .toSet()
-        }
+        return classInfos.values
+            .asSequence()
+            .filter { it.name != ANVILCORD_PLUGIN_CLASS_NAME }
+            .filter { it.isPublicConcreteClass() }
+            .filter { it.hasPublicNoArgConstructor() }
+            .filter { it.implementsPlugin(classInfos) }
+            .map { it.name }
+            .toSet()
     }
 
-    private fun classNamesIn(classDirectory: File): Sequence<String> = classDirectory
+    private fun classFilesIn(classDirectory: File): Sequence<File> = classDirectory
         .walkTopDown()
         .asSequence()
         .filter { it.isFile && it.extension == "class" }
-        .mapNotNull { classFile -> className(classDirectory, classFile) }
+        .filterNot { classFile -> shouldSkipClassFile(classDirectory, classFile) }
 
-    private fun className(classDirectory: File, classFile: File): String? {
+    private fun shouldSkipClassFile(classDirectory: File, classFile: File): Boolean {
         val relativePath = classFile.relativeTo(classDirectory).invariantSeparatorsPath
-        if (relativePath == "module-info.class" || relativePath.endsWith("/package-info.class")) {
-            return null
-        }
-        return relativePath
-            .removeSuffix(".class")
-            .replace('/', '.')
-            .takeUnless { it.contains('$') }
+        return relativePath == "module-info.class" ||
+                relativePath.endsWith("/package-info.class") ||
+                relativePath.contains('$')
     }
 
-    private fun loadProviderClassName(loader: ClassLoader, pluginType: Class<*>, className: String): String? {
-        val candidate = try {
-            loader.loadClass(className)
-        } catch (ex: ReflectiveOperationException) {
-            logger.warn("Could not inspect class '$className' while generating AnvilCord plugin ServiceLoader descriptor", ex)
-            return null
-        } catch (ex: LinkageError) {
-            logger.warn("Could not inspect class '$className' while generating AnvilCord plugin ServiceLoader descriptor", ex)
-            return null
+    private fun readClassInfo(classFile: File): ClassInfo? = try {
+        DataInputStream(classFile.inputStream().buffered()).use { input ->
+            if (input.readInt() != CLASS_FILE_MAGIC) {
+                return null
+            }
+            input.readUnsignedShort() // minor_version
+            input.readUnsignedShort() // major_version
+            val constantPool = readConstantPool(input)
+            val accessFlags = input.readUnsignedShort()
+            val thisClass = input.readUnsignedShort()
+            val superClass = input.readUnsignedShort()
+            val interfaceCount = input.readUnsignedShort()
+            val interfaces = (0 until interfaceCount)
+                .map { constantPool.className(input.readUnsignedShort()) }
+                .map { it.toBinaryName() }
+            skipMembers(input, constantPool) // fields
+            val methods = readMethods(input, constantPool)
+
+            ClassInfo(
+                name = constantPool.className(thisClass).toBinaryName(),
+                accessFlags = accessFlags,
+                superName = superClass.takeUnless { it == 0 }?.let { constantPool.className(it).toBinaryName() },
+                interfaces = interfaces,
+                methods = methods
+            )
+        }
+    } catch (ex: Exception) {
+        logger.warn("Could not inspect class file '$classFile' while generating AnvilCord plugin ServiceLoader descriptor", ex)
+        null
+    }
+
+    private fun readConstantPool(input: DataInputStream): ConstantPool {
+        val entries = arrayOfNulls<Any>(input.readUnsignedShort())
+        var index = 1
+        while (index < entries.size) {
+            when (input.readUnsignedByte()) {
+                1 -> entries[index] = input.readUTF()
+                3, 4 -> input.skipBytes(4)
+                5, 6 -> {
+                    input.skipBytes(8)
+                    index++
+                }
+                7 -> entries[index] = ClassReference(input.readUnsignedShort())
+                8, 16, 19, 20 -> input.skipBytes(2)
+                9, 10, 11, 12, 17, 18 -> input.skipBytes(4)
+                15 -> input.skipBytes(3)
+                else -> throw IllegalArgumentException("Unsupported class-file constant pool entry")
+            }
+            index++
+        }
+        return ConstantPool(entries)
+    }
+
+    private fun skipMembers(input: DataInputStream, constantPool: ConstantPool) {
+        repeat(input.readUnsignedShort()) {
+            input.readUnsignedShort() // access_flags
+            input.readUnsignedShort() // name_index
+            input.readUnsignedShort() // descriptor_index
+            skipAttributes(input)
+        }
+    }
+
+    private fun readMethods(input: DataInputStream, constantPool: ConstantPool): List<MethodInfo> =
+        (0 until input.readUnsignedShort()).map {
+            val accessFlags = input.readUnsignedShort()
+            val name = constantPool.utf8(input.readUnsignedShort())
+            val descriptor = constantPool.utf8(input.readUnsignedShort())
+            skipAttributes(input)
+            MethodInfo(accessFlags, name, descriptor)
         }
 
-        val modifiers = candidate.modifiers
-        if (!pluginType.isAssignableFrom(candidate) || candidate.isInterface || Modifier.isAbstract(modifiers)) {
-            return null
+    private fun skipAttributes(input: DataInputStream) {
+        repeat(input.readUnsignedShort()) {
+            input.readUnsignedShort() // attribute_name_index
+            val length = input.readInt()
+            input.skipFully(length)
         }
-        if (!Modifier.isPublic(modifiers)) {
-            logger.warn("Skipping AnvilCord plugin provider '$className' because ServiceLoader providers must be public")
-            return null
+    }
+
+    private fun DataInputStream.skipFully(length: Int) {
+        var remaining = length
+        while (remaining > 0) {
+            val skipped = skipBytes(remaining)
+            if (skipped <= 0) {
+                throw IllegalArgumentException("Unexpected end of class-file attribute")
+            }
+            remaining -= skipped
         }
-        if (candidate.constructors.none { it.parameterCount == 0 && Modifier.isPublic(it.modifiers) }) {
-            logger.warn("Skipping AnvilCord plugin provider '$className' because ServiceLoader providers need a public no-arg constructor")
-            return null
+    }
+
+    private fun String.toBinaryName(): String = replace('/', '.')
+
+    private data class ClassReference(val nameIndex: Int)
+
+    private class ConstantPool(private val entries: Array<Any?>) {
+        fun utf8(index: Int): String = entries[index] as String
+
+        fun className(index: Int): String = utf8((entries[index] as ClassReference).nameIndex)
+    }
+
+    private data class MethodInfo(
+        val accessFlags: Int,
+        val name: String,
+        val descriptor: String
+    ) {
+        fun isPublicNoArgConstructor(): Boolean =
+            name == "<init>" && descriptor == "()V" && accessFlags.hasFlag(ACC_PUBLIC)
+    }
+
+    private data class ClassInfo(
+        val name: String,
+        val accessFlags: Int,
+        val superName: String?,
+        val interfaces: List<String>,
+        val methods: List<MethodInfo>
+    ) {
+        fun isPublicConcreteClass(): Boolean =
+            accessFlags.hasFlag(ACC_PUBLIC) &&
+                    !accessFlags.hasFlag(ACC_INTERFACE) &&
+                    !accessFlags.hasFlag(ACC_ABSTRACT)
+
+        fun hasPublicNoArgConstructor(): Boolean = methods.any { it.isPublicNoArgConstructor() }
+
+        fun implementsPlugin(classInfos: Map<String, ClassInfo>, visited: Set<String> = emptySet()): Boolean {
+            if (name in visited) {
+                return false
+            }
+            if (TARGET_PLUGIN_CLASS_NAME in interfaces) {
+                return true
+            }
+            val nextVisited = visited + name
+            return interfaces.any { classInfos[it]?.implementsPlugin(classInfos, nextVisited) == true } ||
+                    classInfos[superName]?.implementsPlugin(classInfos, nextVisited) == true
         }
-        return candidate.name
     }
 
     companion object {
-        const val ANVILCORD_PLUGIN_CLASS_NAME = "io.github.yvancywan.anvilcord.core.plugin.AnvilCordPlugin"
+        const val ANVILCORD_PLUGIN_CLASS_NAME = TARGET_PLUGIN_CLASS_NAME
         const val SERVICE_RESOURCE_PATH = "META-INF/services/$ANVILCORD_PLUGIN_CLASS_NAME"
     }
 }
+
+
+
+

@@ -56,7 +56,6 @@ class AnvilCordPluginHostPlugin : Plugin<Project> {
                     task.description = "Generates the AnvilCordPlugin ServiceLoader descriptor."
                     task.group = "build"
                     task.classesDirs.from(main.output.classesDirs)
-                    task.classpath.from(main.output.classesDirs, main.compileClasspath)
                     task.existingServiceFiles.from(main.resources.sourceDirectories.asFileTree.matching {
                         include(GenerateAnvilCordPluginServiceFile.SERVICE_RESOURCE_PATH)
                     })

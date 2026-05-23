@@ -16,6 +16,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AnvilCordPluginHostPluginFunctionalTest {
@@ -53,6 +54,16 @@ class AnvilCordPluginHostPluginFunctionalTest {
                 anvilCord {
                     version.set("0.0.1-SNAPSHOT")
                 }
+
+                tasks.named<org.gradle.api.tasks.compile.JavaCompile>("compileJava") {
+                    doLast {
+                        val classFile = layout.buildDirectory.file("classes/java/main/com/example/GeneratedPlugin.class").get().asFile
+                        val bytes = classFile.readBytes()
+                        bytes[6] = 0
+                        bytes[7] = 69
+                        classFile.writeBytes(bytes)
+                    }
+                }
                 """);
         Files.writeString(project.resolve("src/main/java/com/example/GeneratedPlugin.java"), """
                 package com.example;
@@ -82,7 +93,7 @@ class AnvilCordPluginHostPluginFunctionalTest {
         assertTrue(Files.isRegularFile(jar));
         try (ZipFile zip = new ZipFile(jar.toFile())) {
             ZipEntry serviceEntry = zip.getEntry(GenerateAnvilCordPluginServiceFile.SERVICE_RESOURCE_PATH);
-            assertTrue(serviceEntry != null, "generated ServiceLoader descriptor should be packaged");
+            assertNotNull(serviceEntry, "generated ServiceLoader descriptor should be packaged");
             String descriptor = new String(zip.getInputStream(serviceEntry).readAllBytes()).trim();
             assertEquals("com.example.GeneratedPlugin", descriptor);
         }
@@ -112,7 +123,7 @@ class AnvilCordPluginHostPluginFunctionalTest {
                 """);
 
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        assertTrue(compiler != null, "functional test requires a JDK");
+        assertNotNull(compiler, "functional test requires a JDK");
         int exitCode = compiler.run(null, null, null,
                 "-d", classesRoot.toString(),
                 pluginSource.toString(),
@@ -168,5 +179,7 @@ class AnvilCordPluginHostPluginFunctionalTest {
         return "\"" + path.toUri() + "\"";
     }
 }
+
+
 
 
