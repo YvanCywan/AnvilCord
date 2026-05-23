@@ -64,7 +64,7 @@ Publish the framework artifacts to your local Maven repository for testing from 
 Override the project version for a local build or publish:
 
 ```sh
-./gradlew build -Pverison=0.1.0-SNAPSHOT
+./gradlew build -Pversion=0.1.0-SNAPSHOT
 ```
 
 ## Release versioning
@@ -77,7 +77,7 @@ GitHub Actions creates the next release tag from Conventional Commits with `math
 
 Pushes to `main` create and push the next `v*.*.*` tag, then publish the exact release version without the leading `v`.
 
-The workflow passes the generated version to every Gradle invocation with `-Pverison=...`. The build also accepts `-Pversion=...`, `-PanvilCordVersion=...`, and `ANVILCORD_VERSION` as compatibility aliases.
+The workflow passes the generated version to every Gradle invocation with `-Pversion=...`. The build also accepts `-Pverison=...`, `-PanvilCordVersion=...`, and `ANVILCORD_VERSION` as compatibility aliases.
 
 ## Running the sample host
 

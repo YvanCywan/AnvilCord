@@ -51,12 +51,6 @@ plugins.withId("java") {
 extensions.configure<PublishingExtension> {
     repositories {
         maven {
-            name = "mavenCentral"
-            url = uri(
-                providers.gradleProperty("mavenCentralReleasesUrl")
-                    .orElse("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/")
-                    .get()
-            )
             credentials(PasswordCredentials::class) {
                 username = providers.gradleProperty("mavenCentralUsername")
                     .orElse(providers.environmentVariable("MAVEN_CENTRAL_USERNAME"))
@@ -92,6 +86,7 @@ extensions.configure<PublishingExtension> {
                     developer {
                         id.set("yvancywan")
                         name.set("Yvan Cywan")
+                        email.set("yvan@studio-hebi.com")
                     }
                 }
                 scm {
