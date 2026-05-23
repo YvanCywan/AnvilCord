@@ -61,6 +61,38 @@ Publish the framework artifacts to your local Maven repository for testing from 
 ./gradlew publishToMavenLocal
 ```
 
+Publish release artifacts to Maven Central through Sonatype Central Portal:
+
+```sh
+./gradlew publishToMavenCentral -Pversion=0.2.2
+```
+
+That uploads a deployment for manual release in Central Portal. To upload and automatically release after Central validates the deployment, use:
+
+```sh
+./gradlew publishAndReleaseToMavenCentral -Pversion=0.2.2
+```
+
+Maven Central publishing requires Central Portal user-token credentials and a GPG signing key. Provide them as Gradle properties:
+
+```properties
+mavenCentralUsername=<central-portal-token-username>
+mavenCentralPassword=<central-portal-token-password>
+signingInMemoryKey=<ascii-armored-private-gpg-key>
+signingInMemoryKeyPassword=<gpg-key-password>
+```
+
+The build also accepts these CI environment variable aliases:
+
+```sh
+export MAVEN_CENTRAL_USERNAME="<central-portal-token-username>"
+export MAVEN_CENTRAL_PASSWORD="<central-portal-token-password>"
+export SIGNING_KEY="$(gpg --export-secret-keys --armor <key-id>)"
+export SIGNING_PASSWORD="<gpg-key-password>"
+```
+
+Snapshots use versions ending in `-SNAPSHOT` and are published with the same `publishToMavenCentral` task.
+
 Override the project version for a local build or publish:
 
 ```sh
