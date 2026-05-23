@@ -30,11 +30,6 @@ plugins.withId("java") {
         }
     }
 
-    mapPropertyFromEnvironment("mavenCentralUsername", "MAVEN_CENTRAL_USERNAME")
-    mapPropertyFromEnvironment("mavenCentralPassword", "MAVEN_CENTRAL_PASSWORD")
-    mapPropertyFromEnvironment("signingInMemoryKey", "SIGNING_KEY")
-    mapPropertyFromEnvironment("signingInMemoryKeyPassword", "SIGNING_PASSWORD")
-
     extensions.configure<MavenPublishBaseExtension> {
         coordinates(project.group.toString(), project.name, project.version.toString())
         publishToMavenCentral()
@@ -87,14 +82,3 @@ extensions.configure<PublishingExtension> {
     }
 }
 
-fun mapPropertyFromEnvironment(propertyName: String, environmentVariableName: String) {
-    if (providers.gradleProperty(propertyName).isPresent || extensions.extraProperties.has(propertyName)) {
-        return
-    }
-
-    providers.environmentVariable(environmentVariableName).orNull
-        ?.takeUnless { it.isBlank() }
-        ?.let { value ->
-            extensions.extraProperties[propertyName] = value
-        }
-}

@@ -82,13 +82,23 @@ signingInMemoryKey=<ascii-armored-private-gpg-key>
 signingInMemoryKeyPassword=<gpg-key-password>
 ```
 
-The build also accepts these CI environment variable aliases:
+In CI, expose those Gradle properties before Gradle starts by using Gradle's `ORG_GRADLE_PROJECT_` environment variable convention:
 
 ```sh
-export MAVEN_CENTRAL_USERNAME="<central-portal-token-username>"
-export MAVEN_CENTRAL_PASSWORD="<central-portal-token-password>"
-export SIGNING_KEY="$(gpg --export-secret-keys --armor <key-id>)"
-export SIGNING_PASSWORD="<gpg-key-password>"
+export ORG_GRADLE_PROJECT_mavenCentralUsername="<central-portal-token-username>"
+export ORG_GRADLE_PROJECT_mavenCentralPassword="<central-portal-token-password>"
+export ORG_GRADLE_PROJECT_signingInMemoryKey="$(gpg --export-secret-keys --armor <key-id>)"
+export ORG_GRADLE_PROJECT_signingInMemoryKeyPassword="<gpg-key-password>"
+```
+
+For GitHub Actions, keep secrets named however you prefer, but map them to the `ORG_GRADLE_PROJECT_*` names on the publish step:
+
+```yaml
+env:
+  ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+  ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+  ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+  ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
 ```
 
 Snapshots use versions ending in `-SNAPSHOT` and are published with the same `publishToMavenCentral` task.
