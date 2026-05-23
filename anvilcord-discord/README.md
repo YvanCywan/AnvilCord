@@ -21,6 +21,19 @@ public void initialize(AnvilCordPluginContext context) {
 
 Every gateway event record implements `BotEvent` and includes `Instant occurredAt`.
 
+## Seeing event dispatch logs
+
+Dispatch logging is emitted at `DEBUG` from the framework event bus and Discord gateway bridge. Enable these categories in a host application's Spring configuration when developing plugins:
+
+```yaml
+logging:
+  level:
+    io.github.yvancywan.anvilcord.core.event.VirtualEventBus: DEBUG
+    io.github.yvancywan.anvilcord.discord.DiscordGatewayBridge: DEBUG
+```
+
+Use `TRACE` for the same categories when you also want individual listener-delivery logs and mapped-event details. Discord gateway traffic can be high volume, so `TRACE` is best used temporarily during local debugging.
+
 ## Common snapshots
 
 These immutable snapshot records are reused by gateway events.
