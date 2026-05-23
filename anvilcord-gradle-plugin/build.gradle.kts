@@ -22,13 +22,23 @@ repositories {
     mavenCentral()
 }
 
+dependencies {
+    testImplementation(gradleTestKit())
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.3")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.test {
+    useJUnitPlatform()
+}
+
 gradlePlugin {
     plugins {
         create("anvilCordPluginHost") {
             id = "io.github.yvancywan.anvilcord"
             implementationClass = "io.github.yvancywan.anvilcord.gradle.AnvilCordPluginHostPlugin"
             displayName = "AnvilCord Plugin Host"
-            description = "Adds the AnvilCord core compile API and starter runtime needed by plugin host applications."
+            description = "Adds the AnvilCord core compile API, starter runtime, and generated plugin ServiceLoader metadata."
             tags = listOf("anvilcord", "discord", "spring-boot")
         }
     }

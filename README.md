@@ -202,17 +202,7 @@ public final class ExamplePlugin implements AnvilCordPlugin {
 }
 ```
 
-Register the implementation for Java `ServiceLoader` by adding this resource to the plugin jar:
-
-```text
-META-INF/services/io.github.yvancywan.anvilcord.core.plugin.AnvilCordPlugin
-```
-
-The resource contains the implementation class name:
-
-```text
-com.example.plugin.ExamplePlugin
-```
+When the project applies the AnvilCord Gradle plugin, the Java `ServiceLoader` descriptor is generated automatically. The build scans compiled classes for concrete `AnvilCordPlugin` implementations and packages `META-INF/services/io.github.yvancywan.anvilcord.core.plugin.AnvilCordPlugin` into the jar. Existing hand-written entries are merged, so older plugin projects can delete the file when they no longer need manual registrations.
 
 Add the plugin jar to the host runtime classpath, for example:
 

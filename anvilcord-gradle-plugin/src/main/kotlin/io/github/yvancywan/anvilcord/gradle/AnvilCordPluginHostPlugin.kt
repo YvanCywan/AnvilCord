@@ -1,8 +1,12 @@
 package io.github.yvancywan.anvilcord.gradle
 
+import org.gradle.api.Action
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.plugins.JavaApplication
+import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.language.jvm.tasks.ProcessResources
 
 /**
  * Gradle plugin for applications that host AnvilCord plugins and commands.
@@ -30,6 +34,7 @@ class AnvilCordPluginHostPlugin : Plugin<Project> {
             project.providers.gradleProperty("anvilCordVersion")
                 .orElse(project.providers.provider { defaultAnvilCordVersion(project) })
         )
+        configurePluginServiceGeneration(project)
 
         project.afterEvaluate {
             val anvilCordVersion = extension.version.get()
@@ -37,6 +42,40 @@ class AnvilCordPluginHostPlugin : Plugin<Project> {
             dependencies.add("runtimeOnly", anvilCordDependency(project, "anvilcord-starter", anvilCordVersion))
             dependencies.add("testImplementation", anvilCordDependency(project, "anvilcord-starter", anvilCordVersion))
         }
+    }
+
+    private fun configurePluginServiceGeneration(project: Project) {
+        val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
+        val mainSourceSet = sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME)
+        val generatedServices = project.tasks.register(
+            "generateAnvilCordPluginServiceFile",
+            GenerateAnvilCordPluginServiceFile::class.java,
+            object : Action<GenerateAnvilCordPluginServiceFile> {
+                override fun execute(task: GenerateAnvilCordPluginServiceFile) {
+                    val main = mainSourceSet.get()
+                    task.description = "Generates the AnvilCordPlugin ServiceLoader descriptor."
+                    task.group = "build"
+                    task.classesDirs.from(main.output.classesDirs)
+                    task.classpath.from(main.output.classesDirs, main.compileClasspath)
+                    task.existingServiceFiles.from(main.resources.sourceDirectories.asFileTree.matching {
+                        include(GenerateAnvilCordPluginServiceFile.SERVICE_RESOURCE_PATH)
+                    })
+                    task.outputDirectory.convention(project.layout.buildDirectory.dir("generated/anvilcord/pluginServices"))
+                    main.resources.exclude(GenerateAnvilCordPluginServiceFile.SERVICE_RESOURCE_PATH)
+                }
+            }
+        )
+
+        project.tasks.named(
+            mainSourceSet.get().processResourcesTaskName,
+            ProcessResources::class.java,
+            object : Action<ProcessResources> {
+                override fun execute(task: ProcessResources) {
+                    task.from(generatedServices.flatMap { it.outputDirectory })
+                    task.dependsOn(generatedServices)
+                }
+            }
+        )
     }
 
     private fun anvilCordDependency(project: Project, artifactName: String, version: String): Any {
