@@ -51,6 +51,7 @@ plugins.withId("java") {
 extensions.configure<PublishingExtension> {
     repositories {
         mavenCentral {
+            group = "io.github.yvancywan"
             credentials(PasswordCredentials::class) {
                 username = providers.gradleProperty("mavenCentralUsername")
                     .orElse(providers.environmentVariable("MAVEN_CENTRAL_USERNAME"))
