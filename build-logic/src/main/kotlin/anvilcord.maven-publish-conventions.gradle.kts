@@ -70,6 +70,13 @@ plugins.withId("java") {
 }
 
 extensions.configure<PublishingExtension> {
+    repositories {
+        maven {
+            name = "centralBundle"
+            url = uri(layout.buildDirectory.dir("publishing/centralBundle"))
+        }
+    }
+
     publications.withType<MavenPublication>().configureEach {
         versionMapping {
             usage("java-api") {
