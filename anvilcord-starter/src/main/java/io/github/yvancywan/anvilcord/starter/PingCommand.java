@@ -1,28 +1,25 @@
 package io.github.yvancywan.anvilcord.starter;
 
 import io.github.yvancywan.anvilcord.discord.command.SlashCommand;
-import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
-import discord4j.discordjson.json.ApplicationCommandRequest;
 
 /**
- * Default health-check command proving the full gateway -> virtual thread ->
- * command execution -> Discord response path works end to end.
+ * Default health-check command definition.
  */
-public final class PingCommand implements SlashCommand {
+public final class PingCommand {
 
-    private static final ApplicationCommandRequest REQUEST = ApplicationCommandRequest.builder()
-            .name("ping")
-            .description("Verify that the bot framework command pipeline is alive.")
-            .build();
+    private static final SlashCommand COMMAND = new SlashCommand(
+            "ping",
+            "Verify that the bot framework command pipeline is alive."
+    );
 
-    @Override
-    public ApplicationCommandRequest commandRequest() {
-        return REQUEST;
+    private PingCommand() {
     }
 
-    @Override
-    public void execute(ChatInputInteractionEvent event) {
-        event.reply("Pong!").block();
+    /**
+     * @return built-in ping command model.
+     */
+    public static SlashCommand definition() {
+        return COMMAND;
     }
 }
 

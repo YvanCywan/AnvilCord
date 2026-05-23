@@ -3,9 +3,13 @@ package io.github.yvancywan.anvilcord.discord.command;
 import module java.base;
 import io.github.yvancywan.anvilcord.core.event.VirtualEventBus;
 import io.github.yvancywan.anvilcord.discord.config.BotCoreProperties;
+import io.github.yvancywan.anvilcord.discord.event.DiscordBotActions;
 import io.github.yvancywan.anvilcord.discord.event.DiscordGatewayEvent;
+import discord4j.common.util.Snowflake;
 import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
-import discord4j.discordjson.json.ApplicationCommandRequest;
+import discord4j.core.object.command.Interaction;
+import discord4j.core.object.entity.User;
+import discord4j.core.spec.InteractionApplicationCommandCallbackReplyMono;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -24,7 +28,7 @@ final class SlashCommandOrchestratorTests {
     void discoversCommandsAndSkipsDiscordSyncWhenTokenIsBlank() {
         VirtualEventBus eventBus = new VirtualEventBus();
         SlashCommandOrchestrator orchestrator = new SlashCommandOrchestrator(
-                List.of(new TestSlashCommand("alpha"), new TestSlashCommand("beta")),
+                List.of(new SlashCommand("alpha", "Test command alpha"), new SlashCommand("beta", "Test command beta")),
                 new BotCoreProperties("", ""),
                 eventBus
         );
@@ -44,7 +48,7 @@ final class SlashCommandOrchestratorTests {
 
         try {
             assertThatThrownBy(() -> new SlashCommandOrchestrator(
-                    of(new TestSlashCommand("duplicate"), new TestSlashCommand("duplicate")),
+                    of(new SlashCommand("duplicate", "first"), new SlashCommand("duplicate", "second")),
                     new BotCoreProperties("", ""),
                     eventBus
             )).isInstanceOf(IllegalStateException.class)
@@ -55,49 +59,93 @@ final class SlashCommandOrchestratorTests {
     }
 
     @Test
-    void dispatchesChatInputInteractionsFromSharedEventBus() throws InterruptedException {
+    void publishesChatInputInvocationsFromSharedEventBus() throws InterruptedException {
         VirtualEventBus eventBus = new VirtualEventBus();
-        CountDownLatch executed = new CountDownLatch(1);
+        CountDownLatch invoked = new CountDownLatch(1);
         SlashCommandOrchestrator orchestrator = new SlashCommandOrchestrator(
-                List.of(new TestSlashCommand("alpha", executed)),
+                List.of(new SlashCommand("alpha", "Test command alpha")),
                 new BotCoreProperties("", ""),
                 eventBus
         );
+        eventBus.registerListener(SlashCommandInvocationEvent.class, event -> invoked.countDown());
 
         try {
-            ChatInputInteractionEvent interactionEvent = mock(ChatInputInteractionEvent.class);
+            ChatInputInteractionEvent interactionEvent = testInteraction("alpha", "999");
             when(interactionEvent.getCommandName()).thenReturn("alpha");
 
             eventBus.publish(new DiscordGatewayEvent(interactionEvent, Instant.now()));
 
-            assertThat(executed.await(5, TimeUnit.SECONDS)).isTrue();
+            assertThat(invoked.await(5, TimeUnit.SECONDS)).isTrue();
         } finally {
             orchestrator.close();
             eventBus.close();
         }
     }
 
-    private record TestSlashCommand(String name, CountDownLatch executed) implements SlashCommand {
+    @Test
+    void registersSlashCommandsPublishedByPlugins() {
+        VirtualEventBus eventBus = new VirtualEventBus();
+        SlashCommandOrchestrator orchestrator = new SlashCommandOrchestrator(
+                List.of(),
+                new BotCoreProperties("", ""),
+                eventBus
+        );
 
-        private TestSlashCommand(String name) {
-            this(name, null);
-        }
+        try {
+            eventBus.publish(new SlashCommandRegistrationEvent(new SlashCommand("plugin", "Plugin command"), Instant.now()));
 
-        @Override
-        public ApplicationCommandRequest commandRequest() {
-            return ApplicationCommandRequest.builder()
-                    .name(name)
-                    .description("Test command " + name)
-                    .build();
+            assertThat(orchestrator.commandNames()).containsExactly("plugin");
+        } finally {
+            orchestrator.close();
+            eventBus.close();
         }
+    }
 
-        @Override
-        public void execute(ChatInputInteractionEvent event) {
-            if (executed == null) {
-                throw new UnsupportedOperationException("No live Discord event is needed for this unit test");
-            }
-            executed.countDown();
+    @Test
+    void respondsToPendingInteractionsThroughBotActionEvents() throws InterruptedException {
+        VirtualEventBus eventBus = new VirtualEventBus();
+        CountDownLatch invoked = new CountDownLatch(1);
+        CountDownLatch succeeded = new CountDownLatch(1);
+        SlashCommandOrchestrator orchestrator = new SlashCommandOrchestrator(
+                List.of(new SlashCommand("alpha", "Test command alpha")),
+                new BotCoreProperties("", ""),
+                eventBus
+        );
+        eventBus.registerListener(SlashCommandInvocationEvent.class, event -> invoked.countDown());
+        eventBus.registerListener(DiscordBotActions.ActionSucceeded.class, event -> succeeded.countDown());
+
+        try {
+            ChatInputInteractionEvent interactionEvent = testInteraction("alpha", "999");
+            when(interactionEvent.getCommandName()).thenReturn("alpha");
+            InteractionApplicationCommandCallbackReplyMono replyMono = mock(InteractionApplicationCommandCallbackReplyMono.class);
+            when(interactionEvent.reply("hello")).thenReturn(replyMono);
+
+            eventBus.publish(new DiscordGatewayEvent(interactionEvent, Instant.now()));
+            assertThat(invoked.await(5, TimeUnit.SECONDS)).isTrue();
+
+            eventBus.publish(new DiscordBotActions.RespondToInteraction("999", "hello", "corr", Instant.now()));
+
+            assertThat(succeeded.await(5, TimeUnit.SECONDS)).isTrue();
+        } finally {
+            orchestrator.close();
+            eventBus.close();
         }
+    }
+
+    private static ChatInputInteractionEvent testInteraction(String commandName, String interactionId) {
+        User user = mock(User.class);
+        when(user.getId()).thenReturn(Snowflake.of(123));
+        Interaction interaction = mock(Interaction.class);
+        when(interaction.getId()).thenReturn(Snowflake.of(interactionId));
+        when(interaction.getChannelId()).thenReturn(Snowflake.of(456));
+        when(interaction.getGuildId()).thenReturn(Optional.of(Snowflake.of(789)));
+        when(interaction.getUser()).thenReturn(user);
+
+        ChatInputInteractionEvent interactionEvent = mock(ChatInputInteractionEvent.class);
+        when(interactionEvent.getCommandName()).thenReturn(commandName);
+        when(interactionEvent.getInteraction()).thenReturn(interaction);
+        when(interactionEvent.getOptions()).thenReturn(List.of());
+        return interactionEvent;
     }
 }
 

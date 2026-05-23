@@ -1,28 +1,25 @@
 package io.github.yvancywan.anvilcord.example.plugin;
 
 import io.github.yvancywan.anvilcord.discord.command.SlashCommand;
-import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
-import discord4j.discordjson.json.ApplicationCommandRequest;
 
 /**
- * Annotation-free command contributed by a runtime-only plugin jar.
+ * Command model contributed by a runtime-only plugin jar through the event bus.
  */
-@SuppressWarnings("unused")
-public final class ExampleRuntimeCommand implements SlashCommand {
+public final class ExampleRuntimeCommand {
 
-    private static final ApplicationCommandRequest REQUEST = ApplicationCommandRequest.builder()
-            .name("example-runtime")
-            .description("Verifies runtime-only AnvilCord plugin command discovery.")
-            .build();
+    private static final SlashCommand COMMAND = new SlashCommand(
+            "example-runtime",
+            "Verifies runtime-only AnvilCord plugin command discovery."
+    );
 
-    @Override
-    public ApplicationCommandRequest commandRequest() {
-        return REQUEST;
+    private ExampleRuntimeCommand() {
     }
 
-    @Override
-    public void execute(ChatInputInteractionEvent event) {
-        event.reply("example runtime plugin").block();
+    /**
+     * @return plugin-owned command model.
+     */
+    public static SlashCommand definition() {
+        return COMMAND;
     }
 }
 

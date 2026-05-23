@@ -56,8 +56,8 @@ final class AnvilCordConsumerApplicationTests {
         assertThat(eventBus).isNotNull();
         assertThat(botCoreProperties.hasToken()).isFalse();
         assertThat(slashCommands)
-                .extracting(command -> command.commandRequest().name())
-                .containsExactlyInAnyOrder("consumer-echo", "example-runtime", "ping");
+                .extracting(SlashCommand::name)
+                .containsExactlyInAnyOrder("consumer-echo", "ping");
         assertThat(slashCommandOrchestrator.commandNames())
                 .containsExactlyInAnyOrder("consumer-echo", "example-runtime", "ping");
 
@@ -88,6 +88,11 @@ final class AnvilCordConsumerApplicationTests {
         @Bean
         FrameworkInitializationProbe frameworkInitializationProbe(VirtualEventBus eventBus) {
             return new FrameworkInitializationProbe(eventBus);
+        }
+
+        @Bean
+        SlashCommand consumerEchoSlashCommand() {
+            return ConsumerEchoCommand.definition();
         }
     }
 
@@ -132,15 +137,21 @@ final class AnvilCordConsumerApplicationTests {
 
         private void recordPluginEvent(BotEvent event) {
             String eventTypeName = event.getClass().getName();
-            if (EXAMPLE_PLUGIN_INITIALIZED_EVENT.equals(eventTypeName)) {
-                pluginInitializedEvent.set(event);
-                pluginInitialized.countDown();
-            } else if (EXAMPLE_PLUGIN_OBSERVED_BOT_READY_EVENT.equals(eventTypeName)) {
-                pluginObservedBotReadyEvent.set(event);
-                pluginObservedBotReady.countDown();
-            } else if (EXAMPLE_PLUGIN_OBSERVED_DISCORD_EVENT.equals(eventTypeName)) {
-                pluginObservedDiscordEventValue.set(event);
-                pluginObservedDiscordEvent.countDown();
+            switch (eventTypeName) {
+                case EXAMPLE_PLUGIN_INITIALIZED_EVENT -> {
+                    pluginInitializedEvent.set(event);
+                    pluginInitialized.countDown();
+                }
+                case EXAMPLE_PLUGIN_OBSERVED_BOT_READY_EVENT -> {
+                    pluginObservedBotReadyEvent.set(event);
+                    pluginObservedBotReady.countDown();
+                }
+                case EXAMPLE_PLUGIN_OBSERVED_DISCORD_EVENT -> {
+                    pluginObservedDiscordEventValue.set(event);
+                    pluginObservedDiscordEvent.countDown();
+                }
+                default -> {
+                }
             }
         }
     }

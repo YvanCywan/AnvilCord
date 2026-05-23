@@ -39,12 +39,12 @@ public final class VirtualEventBus {
                 .toList();
 
         if (matchingListeners.isEmpty()) {
-            log.debug("Dispatching BotEvent {} occurredAt={} with no registered listeners",
+            log.info("Dispatching BotEvent {} occurredAt={} with no registered listeners",
                     event.getClass().getName(), event.occurredAt());
             return;
         }
 
-        log.debug("Dispatching BotEvent {} occurredAt={} to {} listener(s)",
+        log.info("Dispatching BotEvent {} occurredAt={} to {} listener(s)",
                 event.getClass().getName(), event.occurredAt(), matchingListeners.size());
         List<Future<?>> futures = new ArrayList<>(matchingListeners.size());
         for (Consumer<? extends BotEvent> listener : matchingListeners) {

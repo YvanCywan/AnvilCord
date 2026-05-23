@@ -23,16 +23,15 @@ Every gateway event record implements `BotEvent` and includes `Instant occurredA
 
 ## Seeing event dispatch logs
 
-Dispatch logging is emitted at `DEBUG` from the framework event bus and Discord gateway bridge. Enable these categories in a host application's Spring configuration when developing plugins:
+Event-bus dispatch summaries are emitted at `INFO` from `VirtualEventBus`, so they are visible with Spring Boot's default root logging level. Discord gateway adapter summaries are emitted at `DEBUG`; enable that category in a host application's Spring configuration when developing plugins:
 
 ```yaml
 logging:
   level:
-    io.github.yvancywan.anvilcord.core.event.VirtualEventBus: DEBUG
     io.github.yvancywan.anvilcord.discord.DiscordGatewayBridge: DEBUG
 ```
 
-Use `TRACE` for the same categories when you also want individual listener-delivery logs and mapped-event details. Discord gateway traffic can be high volume, so `TRACE` is best used temporarily during local debugging.
+Use `TRACE` for `io.github.yvancywan.anvilcord.core.event.VirtualEventBus` when you also want individual listener-delivery logs. Use `TRACE` for `io.github.yvancywan.anvilcord.discord.DiscordGatewayBridge` when you want mapped Discord-event details. Discord gateway traffic can be high volume, so `TRACE` is best used temporarily during local debugging.
 
 ## Common snapshots
 
@@ -176,7 +175,30 @@ These immutable snapshot records are reused by gateway events.
 | `InviteCreated` | `code`, `channelId`, `guildId`, nullable `UserSnapshot inviter`, `uses`, `maxUses`, `maxAgeSeconds`, `temporary`, nullable `expiresAt`, `occurredAt`. |
 | `InviteDeleted` | `code`, `channelId`, `guildId`, `occurredAt`. |
 | `WebhooksUpdated` | `guildId`, `channelId`, `occurredAt`. |
-| `InteractionReceived` | `interactionId`, `applicationId`, `channelId`, `guildId`, `userId`, `interactionType`, `occurredAt`. Slash-command dispatch still uses `SlashCommandOrchestrator`; this event is for plugin observation. |
+| `InteractionReceived` | `interactionId`, `applicationId`, `channelId`, `guildId`, `userId`, `interactionType`, `occurredAt`. This event is for generic interaction observation. Slash commands also publish `SlashCommandInvocationEvent`. |
+
+## Slash-command model and invocation events
+
+`SlashCommand` is a model record made from standard Java values: `name`, `description`, and optional `List<SlashCommand.Option>`. The Discord module adapts this model into Discord4J `ApplicationCommandRequest` objects internally.
+
+Plugins can contribute commands by publishing `SlashCommandRegistrationEvent` during plugin initialization:
+
+```java
+SlashCommand command = new SlashCommand("announce", "Publishes an announcement.");
+context.publish(new SlashCommandRegistrationEvent(command, Instant.now()));
+```
+
+When Discord invokes a registered chat-input command, `SlashCommandOrchestrator` publishes `SlashCommandInvocationEvent` with:
+
+| Field | Meaning |
+| --- | --- |
+| `commandName` | Registered command name. |
+| `interactionId` | Discord interaction snowflake used for `RespondToInteraction`. |
+| `channelId` | Channel where the command was invoked. |
+| `guildId` | Guild snowflake, blank for non-guild contexts. |
+| `userId` | Invoking user snowflake. |
+| `options` | Immutable `Map<String, String>` of option names to raw Discord values. |
+| `occurredAt` | Time AnvilCord published the invocation. |
 
 ## Raw gateway fallback
 
@@ -215,6 +237,7 @@ The bridge executes actions only when the Discord gateway is connected. Each act
 | `AddReaction` | `channelId`, `messageId`, `unicodeEmoji`, `correlationId`, `occurredAt` | Adds a Unicode emoji reaction. |
 | `RemoveSelfReaction` | `channelId`, `messageId`, `unicodeEmoji`, `correlationId`, `occurredAt` | Removes the bot's own Unicode emoji reaction. |
 | `StartTyping` | `channelId`, `correlationId`, `occurredAt` | Emits a typing indicator in a message channel. |
+| `RespondToInteraction` | `interactionId`, `content`, `correlationId`, `occurredAt` | Replies to a pending slash-command interaction published as `SlashCommandInvocationEvent`. |
 
 ### Action result events
 

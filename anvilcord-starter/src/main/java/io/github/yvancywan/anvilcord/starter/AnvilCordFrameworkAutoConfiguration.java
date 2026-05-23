@@ -2,6 +2,7 @@ package io.github.yvancywan.anvilcord.starter;
 
 import io.github.yvancywan.anvilcord.core.event.VirtualEventBus;
 import io.github.yvancywan.anvilcord.discord.DiscordGatewayBridge;
+import io.github.yvancywan.anvilcord.discord.command.SlashCommand;
 import io.github.yvancywan.anvilcord.discord.config.BotCoreProperties;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -22,11 +23,6 @@ import org.springframework.context.annotation.ComponentScan;
 public class AnvilCordFrameworkAutoConfiguration {
 
 	@Bean
-	static AnvilCordSlashCommandBeanRegistrar anvilCordSlashCommandBeanRegistrar() {
-		return new AnvilCordSlashCommandBeanRegistrar();
-	}
-
-	@Bean
 	static AnvilCordPluginBeanRegistrar anvilCordPluginBeanRegistrar() {
 		return new AnvilCordPluginBeanRegistrar();
 	}
@@ -34,6 +30,11 @@ public class AnvilCordFrameworkAutoConfiguration {
 	@Bean
 	AnvilCordPluginInitializer anvilCordPluginInitializer(VirtualEventBus eventBus) {
 		return new AnvilCordPluginInitializer(eventBus);
+	}
+
+	@Bean
+	SlashCommand pingSlashCommand() {
+		return PingCommand.definition();
 	}
 }
 

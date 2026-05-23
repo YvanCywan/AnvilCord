@@ -48,6 +48,11 @@ public final class DiscordBotActions {
         public StartTyping { channelId = requireText(channelId, "channelId"); correlationId = defaultCorrelation(correlationId); occurredAt = defaultNow(occurredAt); }
     }
 
+    /** Requests that the bot reply to a pending slash-command interaction. */
+    public record RespondToInteraction(String interactionId, String content, String correlationId, Instant occurredAt) implements BotEvent {
+        public RespondToInteraction { interactionId = requireText(interactionId, "interactionId"); content = requireText(content, "content"); correlationId = defaultCorrelation(correlationId); occurredAt = defaultNow(occurredAt); }
+    }
+
     /** Published after an action completes successfully. */
     public record ActionSucceeded(String actionType, String correlationId, String resultId, Instant occurredAt) implements BotEvent {
         public ActionSucceeded { actionType = requireText(actionType, "actionType"); correlationId = requireText(correlationId, "correlationId"); resultId = nullToEmpty(resultId); occurredAt = defaultNow(occurredAt); }

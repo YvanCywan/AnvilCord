@@ -36,7 +36,7 @@ public interface AnvilCordPlugin {
 
     /**
      * Returns package roots that AnvilCord should scan for plugin-owned Spring
-     * components and annotation-free framework contracts such as slash commands.
+     * components.
      *
      * <p>The default scans the implementation class package, including its
      * subpackages.</p>
