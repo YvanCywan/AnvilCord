@@ -39,8 +39,7 @@ jobs:
 
     outputs:
       version: ${{ steps.gradle_version.outputs.version }}
-      main_deployment_id: ${{ steps.main_deployment.outputs.deployment_id }}
-      gradle_plugin_deployment_id: ${{ steps.gradle_plugin_deployment.outputs.deployment_id }}
+      deployment_id: ${{ steps.central_deployment.outputs.deployment_id }}
 
     steps:
       - uses: actions/checkout@v6
@@ -66,8 +65,8 @@ jobs:
       - name: Build included Gradle plugin
         run: ./gradlew -p anvilcord-gradle-plugin build -Pversion=${{ steps.gradle_version.outputs.version }} --stacktrace
 
-      - name: Stage and upload main project artifacts
-        id: main_deployment
+      - name: Stage and upload Maven Central artifacts
+        id: central_deployment
         shell: bash
         env:
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
@@ -81,10 +80,17 @@ jobs:
           ./gradlew publishAllPublicationsToCentralBundleRepository \
             -Pversion=${{ steps.gradle_version.outputs.version }} \
             --stacktrace --info
+          ./gradlew -p anvilcord-gradle-plugin publishAllPublicationsToCentralBundleRepository \
+            -Pversion=${{ steps.gradle_version.outputs.version }} \
+            --stacktrace --info
 
-          mapfile -t repository_roots < <(find anvilcord-core anvilcord-discord anvilcord-starter \
+          mapfile -t repository_roots < <(find \
+            anvilcord-core \
+            anvilcord-discord \
+            anvilcord-starter \
+            anvilcord-gradle-plugin \
             -type d -path '*/build/publishing/centralBundle' -print | sort)
-          bundle_path="$RUNNER_TEMP/main-project-central-bundle.zip"
+          bundle_path="$RUNNER_TEMP/anvilcord-central-bundle.zip"
           python3 - "$bundle_path" "${repository_roots[@]}" <<'PY'
           import os
           import sys
@@ -106,7 +112,7 @@ jobs:
           PY
 
           token="$(printf '%s:%s' "$MAVEN_CENTRAL_USERNAME" "$MAVEN_CENTRAL_PASSWORD" | base64 | tr -d '\n')"
-          deployment_name="anvilcord-${{ steps.gradle_version.outputs.version }}-main"
+          deployment_name="anvilcord-${{ steps.gradle_version.outputs.version }}"
           encoded_name="$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$deployment_name")"
           upload_response="$(curl --fail-with-body --show-error --silent \
             --request POST \
@@ -137,88 +143,12 @@ jobs:
           PY
           )"
           if [[ -z "$deployment_id" ]]; then
-            echo "Central Portal upload returned an empty main project deployment ID" >&2
+            echo "Central Portal upload returned an empty deployment ID" >&2
             echo "Upload response: $upload_response" >&2
             exit 1
           fi
           echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
-          echo "Captured main project Maven Central deployment ID: $deployment_id"
-
-      - name: Stage and upload Gradle plugin artifact
-        id: gradle_plugin_deployment
-        shell: bash
-        env:
-          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
-          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
-        run: |
-          set -euo pipefail
-          ./gradlew -p anvilcord-gradle-plugin publishAllPublicationsToCentralBundleRepository \
-            -Pversion=${{ steps.gradle_version.outputs.version }} \
-            --stacktrace --info
-
-          bundle_path="$RUNNER_TEMP/gradle-plugin-central-bundle.zip"
-          python3 - "$bundle_path" anvilcord-gradle-plugin/build/publishing/centralBundle <<'PY'
-          import os
-          import sys
-          import zipfile
-
-          bundle_path = sys.argv[1]
-          repository_roots = sys.argv[2:]
-          if not repository_roots:
-              raise SystemExit("No Maven Central bundle repository roots were found")
-          with zipfile.ZipFile(bundle_path, "w", zipfile.ZIP_DEFLATED) as bundle:
-              for repository_root in repository_roots:
-                  for directory, _, filenames in os.walk(repository_root):
-                      for filename in filenames:
-                          if "maven-metadata" in filename:
-                              continue
-                          path = os.path.join(directory, filename)
-                          archive_name = os.path.relpath(path, repository_root).replace(os.sep, "/")
-                          bundle.write(path, archive_name)
-          PY
-
-          token="$(printf '%s:%s' "$MAVEN_CENTRAL_USERNAME" "$MAVEN_CENTRAL_PASSWORD" | base64 | tr -d '\n')"
-          deployment_name="anvilcord-${{ steps.gradle_version.outputs.version }}-gradle-plugin"
-          encoded_name="$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$deployment_name")"
-          upload_response="$(curl --fail-with-body --show-error --silent \
-            --request POST \
-            --header "Authorization: Bearer $token" \
-            --header "Accept: application/json" \
-            --form "bundle=@$bundle_path;type=application/octet-stream" \
-            "https://central.sonatype.com/api/v1/publisher/upload?name=$encoded_name&publishingType=USER_MANAGED")"
-          deployment_id="$(UPLOAD_RESPONSE="$upload_response" python3 <<'PY'
-          import json
-          import os
-          import re
-
-          text = os.environ["UPLOAD_RESPONSE"].strip()
-          try:
-              parsed = json.loads(text)
-              if isinstance(parsed, str):
-                  print(parsed)
-              elif isinstance(parsed, dict):
-                  print(parsed.get("deploymentId") or parsed.get("id") or "")
-              else:
-                  print("")
-          except Exception:
-              match = re.search(
-                  r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|(?=[A-Za-z0-9_-]{9,}\b)(?=[A-Za-z0-9_-]*[0-9])[A-Za-z0-9_-]+",
-                  text,
-              )
-              print(match.group(0) if match else text.strip('"'))
-          PY
-          )"
-          if [[ -z "$deployment_id" ]]; then
-            echo "Central Portal upload returned an empty Gradle plugin deployment ID" >&2
-            echo "Upload response: $upload_response" >&2
-            exit 1
-          fi
-          echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
-          echo "Captured Gradle plugin Maven Central deployment ID: $deployment_id"
+          echo "Captured Maven Central deployment ID: $deployment_id"
 
   release-published-artifacts:
     name: Release published artifacts
@@ -231,13 +161,12 @@ jobs:
       url: https://central.sonatype.com/publishing/deployments
 
     steps:
-      - name: Publish approved Maven Central deployments
+      - name: Publish approved Maven Central deployment
         shell: bash
         env:
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
-          MAIN_DEPLOYMENT_ID: ${{ needs.build-and-publish.outputs.main_deployment_id }}
-          GRADLE_PLUGIN_DEPLOYMENT_ID: ${{ needs.build-and-publish.outputs.gradle_plugin_deployment_id }}
+          DEPLOYMENT_ID: ${{ needs.build-and-publish.outputs.deployment_id }}
         run: |
           set -euo pipefail
 
@@ -292,8 +221,7 @@ jobs:
             return 1
           }
 
-          publish_deployment "main project" "$MAIN_DEPLOYMENT_ID"
-          publish_deployment "Gradle plugin" "$GRADLE_PLUGIN_DEPLOYMENT_ID"
+          publish_deployment "AnvilCord" "$DEPLOYMENT_ID"
 
       - name: Create GitHub release
         shell: bash
