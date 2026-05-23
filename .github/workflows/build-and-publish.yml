@@ -37,6 +37,11 @@ jobs:
     needs: create-version-tag
     runs-on: ubuntu-latest
 
+    outputs:
+      version: ${{ steps.gradle_version.outputs.version }}
+      main_deployment_id: ${{ steps.main_deployment.outputs.deployment_id }}
+      gradle_plugin_deployment_id: ${{ steps.gradle_plugin_deployment.outputs.deployment_id }}
+
     steps:
       - uses: actions/checkout@v6
       - uses: gradle/actions/setup-gradle@v6
@@ -62,17 +67,144 @@ jobs:
         run: ./gradlew -p anvilcord-gradle-plugin build -Pversion=${{ steps.gradle_version.outputs.version }} --stacktrace
 
       - name: Publish main project artifacts
+        id: publish_main
+        shell: bash
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
-        run: ./gradlew publishToMavenCentral -Pversion=${{ steps.gradle_version.outputs.version }} --stacktrace --info
+        run: |
+          set -euo pipefail
+          ./gradlew publishToMavenCentral -Pversion=${{ steps.gradle_version.outputs.version }} --stacktrace --info 2>&1 \
+            | tee "$RUNNER_TEMP/main-project-publish.log"
+
+      - name: Capture main project Maven Central deployment ID
+        id: main_deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          deployment_id="$(sed -nE 's/.*Validating deployment ([[:alnum:]-]+)\.\.\..*/\1/p' "$RUNNER_TEMP/main-project-publish.log" | tail -n 1)"
+          if [[ -z "$deployment_id" ]]; then
+            echo "Unable to find main project Maven Central deployment ID in publish log" >&2
+            exit 1
+          fi
+          echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
+          echo "Captured main project Maven Central deployment ID: $deployment_id"
 
       - name: Publish Gradle plugin artifact
+        id: publish_gradle_plugin
+        shell: bash
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
-        run: ./gradlew -p anvilcord-gradle-plugin publishToMavenCentral -Pversion=${{ steps.gradle_version.outputs.version }} --stacktrace --info
+        run: |
+          set -euo pipefail
+          ./gradlew -p anvilcord-gradle-plugin publishToMavenCentral -Pversion=${{ steps.gradle_version.outputs.version }} --stacktrace --info 2>&1 \
+            | tee "$RUNNER_TEMP/gradle-plugin-publish.log"
+
+      - name: Capture Gradle plugin Maven Central deployment ID
+        id: gradle_plugin_deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          deployment_id="$(sed -nE 's/.*Validating deployment ([[:alnum:]-]+)\.\.\..*/\1/p' "$RUNNER_TEMP/gradle-plugin-publish.log" | tail -n 1)"
+          if [[ -z "$deployment_id" ]]; then
+            echo "Unable to find Gradle plugin Maven Central deployment ID in publish log" >&2
+            exit 1
+          fi
+          echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
+          echo "Captured Gradle plugin Maven Central deployment ID: $deployment_id"
+
+  release-published-artifacts:
+    name: Release published artifacts
+    needs:
+      - create-version-tag
+      - build-and-publish
+    runs-on: ubuntu-latest
+    environment:
+      name: maven-central-release
+      url: https://central.sonatype.com/publishing/deployments
+
+    steps:
+      - name: Publish approved Maven Central deployments
+        shell: bash
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          MAIN_DEPLOYMENT_ID: ${{ needs.build-and-publish.outputs.main_deployment_id }}
+          GRADLE_PLUGIN_DEPLOYMENT_ID: ${{ needs.build-and-publish.outputs.gradle_plugin_deployment_id }}
+        run: |
+          set -euo pipefail
+
+          token="$(printf '%s:%s' "$MAVEN_CENTRAL_USERNAME" "$MAVEN_CENTRAL_PASSWORD" | base64 | tr -d '\n')"
+
+          deployment_state() {
+            local deployment_id="$1"
+            curl --fail-with-body --show-error --silent \
+              --request POST \
+              --header "Authorization: Bearer $token" \
+              --header "Accept: application/json" \
+              "https://central.sonatype.com/api/v1/publisher/status?id=$deployment_id"
+          }
+
+          publish_deployment() {
+            local label="$1"
+            local deployment_id="$2"
+            if [[ -z "$deployment_id" ]]; then
+              echo "Missing Maven Central deployment ID for $label" >&2
+              exit 1
+            fi
+
+            publish_requested=false
+            for attempt in {1..180}; do
+              response="$(deployment_state "$deployment_id")"
+              state="$(python3 -c 'import json, sys; print(json.load(sys.stdin).get("deploymentState", "UNKNOWN"))' <<< "$response")"
+              echo "$label deployment $deployment_id state: $state"
+              case "$state" in
+                PUBLISHED)
+                  return 0
+                  ;;
+                VALIDATED)
+                  if [[ "$publish_requested" == false ]]; then
+                    echo "Publishing $label Maven Central deployment $deployment_id"
+                    curl --fail-with-body --show-error --silent \
+                      --request POST \
+                      --header "Authorization: Bearer $token" \
+                      --header "Accept: application/json" \
+                      "https://central.sonatype.com/api/v1/publisher/deployment/$deployment_id"
+                    publish_requested=true
+                  fi
+                  ;;
+                FAILED)
+                  echo "$response" >&2
+                  return 1
+                  ;;
+              esac
+              sleep 10
+            done
+
+            echo "$label deployment $deployment_id did not reach PUBLISHED before timeout" >&2
+            return 1
+          }
+
+          publish_deployment "main project" "$MAIN_DEPLOYMENT_ID"
+          publish_deployment "Gradle plugin" "$GRADLE_PLUGIN_DEPLOYMENT_ID"
+
+      - name: Create GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.create-version-tag.outputs.new_tag }}
+          RELEASE_VERSION: ${{ needs.build-and-publish.outputs.version }}
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "GitHub release $RELEASE_TAG already exists; skipping creation"
+            exit 0
+          fi
+          gh release create "$RELEASE_TAG" \
+            --title "AnvilCord $RELEASE_VERSION" \
+            --generate-notes

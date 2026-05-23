@@ -103,6 +103,8 @@ env:
 
 Snapshots use versions ending in `-SNAPSHOT` and are published with the same `publishToMavenCentral` task.
 
+The GitHub Actions release workflow intentionally separates upload from release. The build job uploads validated user-managed deployments to Maven Central and captures their deployment IDs. A final `maven-central-release` environment-gated job waits for maintainer approval, then publishes those already-uploaded deployments through the Central Portal API and creates the GitHub release. Configure the repository environment named `maven-central-release` with required reviewers to make this approval gate behave like a Terraform apply approval.
+
 Override the project version for a local build or publish:
 
 ```sh
@@ -117,7 +119,7 @@ GitHub Actions creates the next release tag from Conventional Commits with `math
 - Other commit types bump the patch version.
 - Commits with `!` in the header, or `BREAKING CHANGE:` / `BREAKING-CHANGE:` in the body, bump the major version.
 
-Pushes to `main` create and push the next `v*.*.*` tag, then publish the exact release version without the leading `v`.
+Pushes to `main` create and push the next `v*.*.*` tag, upload the exact release version without the leading `v`, then wait for approval on the `maven-central-release` environment before publishing the uploaded Maven Central deployments and creating the GitHub release.
 
 The workflow passes the generated version to every Gradle invocation with `-Pversion=...`. The build also accepts `-Pverison=...`, `-PanvilCordVersion=...`, and `ANVILCORD_VERSION` as compatibility aliases.
 
