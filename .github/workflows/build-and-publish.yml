@@ -299,14 +299,16 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ needs.create-version-tag.outputs.new_tag }}
           RELEASE_VERSION: ${{ needs.build-and-publish.outputs.version }}
         run: |
           set -euo pipefail
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+          if gh release view "$RELEASE_TAG" --repo "$GH_REPO" >/dev/null 2>&1; then
             echo "GitHub release $RELEASE_TAG already exists; skipping creation"
             exit 0
           fi
           gh release create "$RELEASE_TAG" \
+            --repo "$GH_REPO" \
             --title "AnvilCord $RELEASE_VERSION" \
             --generate-notes
