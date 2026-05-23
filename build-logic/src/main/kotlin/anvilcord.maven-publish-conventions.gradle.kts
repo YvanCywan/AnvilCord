@@ -50,7 +50,7 @@ plugins.withId("java") {
 
 extensions.configure<PublishingExtension> {
     repositories {
-        maven {
+        mavenCentral {
             credentials(PasswordCredentials::class) {
                 username = providers.gradleProperty("mavenCentralUsername")
                     .orElse(providers.environmentVariable("MAVEN_CENTRAL_USERNAME"))
