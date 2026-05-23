@@ -2,6 +2,7 @@ package io.github.yvancywan.anvilcord.discord;
 
 import module java.base;
 
+import io.github.yvancywan.anvilcord.core.event.BotEvent;
 import io.github.yvancywan.anvilcord.core.event.BotReadyEvent;
 import io.github.yvancywan.anvilcord.core.event.BotUserProfile;
 import io.github.yvancywan.anvilcord.core.event.GatewayDisconnectEvent;
@@ -161,8 +162,17 @@ public final class DiscordGatewayBridge implements SmartLifecycle {
     }
 
     private void publishGatewayEvent(Event event) {
-        eventBus.publish(new DiscordGatewayEvent(event, Instant.now()));
-        DiscordGatewayEventMapper.map(event, Instant.now()).forEach(eventBus::publish);
+        Instant occurredAt = Instant.now();
+        List<BotEvent> mappedEvents = DiscordGatewayEventMapper.map(event, occurredAt);
+        log.debug("Dispatching Discord gateway event {} as raw event plus {} stable event(s)",
+                event.getClass().getName(), mappedEvents.size());
+
+        eventBus.publish(new DiscordGatewayEvent(event, occurredAt));
+        mappedEvents.forEach(mappedEvent -> {
+            log.trace("Dispatching mapped Discord BotEvent {} from gateway event {}",
+                    mappedEvent.getClass().getName(), event.getClass().getName());
+            eventBus.publish(mappedEvent);
+        });
         if (event instanceof ReadyEvent readyEvent) {
             publishReadyEvent(readyEvent);
         } else if (event instanceof DisconnectEvent disconnectEvent) {
@@ -222,7 +232,10 @@ public final class DiscordGatewayBridge implements SmartLifecycle {
     private void executeAction(String actionType, String correlationId, Supplier<String> action) {
         virtualThreadExecutor.submit(() -> {
             try {
+                log.debug("Executing Discord bot action {} correlationId={}", actionType, correlationId);
                 String resultId = action.get();
+                log.debug("Discord bot action {} correlationId={} succeeded resultId={}",
+                        actionType, correlationId, resultId);
                 eventBus.publish(new DiscordBotActions.ActionSucceeded(actionType, correlationId, resultId, Instant.now()));
             } catch (Throwable throwable) {
                 log.warn("Discord bot action {} failed", actionType, throwable);

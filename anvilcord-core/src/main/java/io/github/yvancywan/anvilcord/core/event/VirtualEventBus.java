@@ -39,16 +39,25 @@ public final class VirtualEventBus {
                 .toList();
 
         if (matchingListeners.isEmpty()) {
-            log.trace("No listeners registered for {}", event.getClass().getName());
+            log.debug("Dispatching BotEvent {} occurredAt={} with no registered listeners",
+                    event.getClass().getName(), event.occurredAt());
             return;
         }
 
+        log.debug("Dispatching BotEvent {} occurredAt={} to {} listener(s)",
+                event.getClass().getName(), event.occurredAt(), matchingListeners.size());
         List<Future<?>> futures = new ArrayList<>(matchingListeners.size());
         for (Consumer<? extends BotEvent> listener : matchingListeners) {
-            futures.add(virtualThreadExecutor.submit(() -> invokeListener(listener, event)));
+            futures.add(virtualThreadExecutor.submit(() -> {
+                log.trace("Delivering BotEvent {} to listener {}",
+                        event.getClass().getName(), listener.getClass().getName());
+                invokeListener(listener, event);
+            }));
         }
 
         waitForListeners(event, futures);
+        log.trace("Finished dispatching BotEvent {} to {} listener(s)",
+                event.getClass().getName(), matchingListeners.size());
     }
 
     /**
