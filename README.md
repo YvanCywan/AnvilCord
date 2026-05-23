@@ -251,6 +251,12 @@ public final class HelloCommand implements SlashCommand {
 
 The framework discovers command implementations from host and plugin packages and executes each command on a virtual thread.
 
+## Reacting to Discord events and requesting bot actions
+
+`anvilcord-discord` publishes stable Discord gateway payload records such as `DiscordGatewayEvents.MessageCreated`, `MemberJoined`, `ChannelUpdated`, and `InteractionReceived` to the shared event bus. Plugins can also publish `DiscordBotActions` records such as `SendChannelMessage` to request bot side effects.
+
+See [`anvilcord-discord/README.md`](anvilcord-discord/README.md) for the complete event and action payload reference.
+
 ## Native image and container support
 
 The starter module applies Spring Boot and GraalVM Native Build Tools. Depending on your local GraalVM and Docker setup, useful tasks include:
