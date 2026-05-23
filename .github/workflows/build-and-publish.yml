@@ -10,16 +10,20 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 jobs:
+
   create-version-tag:
     name: Create version tag
     runs-on: ubuntu-latest
+
     outputs:
       new_tag: ${{ steps.tag_version.outputs.new_tag }}
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
+
       - name: Bump version and push tag
         id: tag_version
         uses: mathieudutour/github-tag-action@v6.2
@@ -27,23 +31,28 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: patch
           tag_prefix: v
+
   build-and-publish:
     name: Build and publish
     needs: create-version-tag
     runs-on: ubuntu-latest
+
+    env:
+      MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+      MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+      SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+      SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ needs.create-version-tag.outputs.new_tag }}
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '25'
+
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
+
       - name: Prepare Gradle version
         id: gradle_version
         shell: bash
@@ -57,10 +66,13 @@ jobs:
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Publishing version $version from tag $NEW_TAG"
+
       - name: Build main project
         run: ./gradlew build -Pversion=${{ steps.gradle_version.outputs.version }} --stacktrace
+
       - name: Build included Gradle plugin
         run: ./gradlew -p anvilcord-gradle-plugin build -Pversion=${{ steps.gradle_version.outputs.version }} --stacktrace
+
       - name: Check publishing secrets are present
         env:
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
@@ -73,6 +85,7 @@ jobs:
           test -n "$SIGNING_KEY" || { echo "SIGNING_KEY is missing"; exit 1; }
           test -n "$SIGNING_PASSWORD" || { echo "SIGNING_PASSWORD is missing"; exit 1; }
           echo "Publishing secrets are configured."
+
       - name: Publish main project artifacts
         env:
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
@@ -80,6 +93,7 @@ jobs:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
         run: ./gradlew publish -Pversion=${{ steps.gradle_version.outputs.version }} --stacktrace --info
+
       - name: Publish Gradle plugin artifact
         env:
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
